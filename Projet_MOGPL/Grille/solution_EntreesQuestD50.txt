@@ -1,0 +1,21 @@
+
+6 G a2 a3 a3 G a2
+
+8 D D a2 G a1 a3 D a3
+
+2 a3 a3
+
+9 a2 D a2 G a2 a2 G a1 a3
+
+-1 
+
+6 D D a1 a3 G a2
+
+-1 
+
+-1 
+
+1 a3
+
+4 a2 a3 D a2
+
