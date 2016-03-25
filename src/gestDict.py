@@ -6,8 +6,9 @@ Created on Thu Mar 24 10:50:17 2016
 """
 
 from error_tools import FinProgException
+from tools import ABS_PATH_PRINC,OUT_STREAM
 
-DICO_PATH = "/media/daphnehb/Lexar/RP/data/Dicos/"
+DICO_PATH = ABS_PATH_PRINC+"/data/Dicos/"
 
 DICT_FNAME = "850-mots-us.txt"
 
@@ -35,11 +36,11 @@ def recupDictionnaire(liste_fname=None):
             try:
                 remplirDico()
             except FinProgException:
-                print "Le fichier {} n'a pu être chargé...".format(name)
+                OUT_STREAM.write("Le fichier {} n'a pu être chargé...\n".format(name))
         #end for
         # si aucun fichier n'était valide, le dico reste vide
         if DICTIONNAIRE=={}:
-            raise FinProgException("Aucun fichier ne correspondait à un dictionnaire.")
+            raise FinProgException("Aucun fichier ne correspondait à un dictionnaire.\n")
         # end if
     # end if
     
@@ -53,10 +54,9 @@ def remplirDico():
     try :
         monfile = open(filename,"r")
     except IOError:
-        print "Fichier inexistant"
-        raise FinProgException('Fichier {} inexitant!'.format(DICO_PATH+DICT_FNAME))
+        raise FinProgException('Fichier {} inexitant!\n'.format(DICO_PATH+DICT_FNAME))
     
-    print "Récupération du dictionnaire contenu dans",DICO_PATH+DICT_FNAME
+    OUT_STREAM.write("Récupération du dictionnaire contenu dans {}\n".format(DICO_PATH+DICT_FNAME))
     line = "\n"
     # tant que ce n'est pas la fin du fichier
     while line!="":
@@ -86,10 +86,10 @@ def clearDico():
     global DICTIONNAIRE
     DICTIONNAIRE = dict()    
     
-def afficheDico(outStream):
+def afficheDico():
     global DICTIONNAIRE
-    
+    OUT_STREAM.write("\Dictionnaire: \n")
     for t in sorted(DICTIONNAIRE.keys()):
-        outStream.write("Mots de taille {} : \n\t{}\n".format(t,DICTIONNAIRE[t]))
+        OUT_STREAM.write("Mots de taille {} : \n\t{}\n".format(t,DICTIONNAIRE[t]))
     # end for
     # end
