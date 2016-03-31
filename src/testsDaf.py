@@ -15,7 +15,7 @@ import error_tools as err
 # to charge it multiple dictionnaires
 dic.recupDictionnaire()
 #dic.recupDictionnaire(["133000-mots-us.txt","850-mots-us.txt"])
-#dic.afficheDico()
+dic.afficheDico()
 # to clear the dico
 #dic.clearDico()
 
@@ -31,4 +31,3 @@ except err.UnknownVarNbException:
     err.print_err("ERROR")
 gr = cl.GrilleMots.genere_grid(5,5,9)
 print gr.contraintes
-

@@ -10,6 +10,7 @@ import random
 from enum import Enum
 import tools
 import error_tools as err
+from gestDict import recupSousDictionnaire
 
 class Orientation(Enum):
     """
@@ -244,6 +245,14 @@ class GrilleMots:
         grille_mots = GrilleMots(grille,lignes,colonnes)
         return grille_mots
 
+class Solver:
+
+    def __init__(self, grid, dictionnaire):
+        self.grid = grid
+        self.dictionnaire = dictionnaire
+        self.variables = grid.variables
+        self.contraintes = grid.contraintes
+
     ############### Check arc-consistency in CSP data structure ###############
     def ac3(self):
         """
@@ -251,41 +260,40 @@ class GrilleMots:
         @return 1-boolean
         """
         def areLetterIntersect(motX, motY, indH, indV):
-            return motX[inH] == motY[indV]
+            return motX[indH] == motY[indV]
 
-        def revised(dX, indX, indV):
+        def revised(dX, dY, indX, indY):
             """
             Update the domain of one variable by excluding the domain value
-            from the other variable
-            @return 1-boolean
+            from the other variable (Remove inconsistent values)
+            @return 1-boolean (True if we remove a value)
             """
             revised = False
             for motX in dX:
-                if not any(areLetterIntersect(motX, motY, indX, indV) for motY in dY):
+                # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
+                if not any(areLetterIntersect(motX, motY, indX, indY) for motY in dY):
                     revised = True
                     dX.remove(motX)
             return revised
 
         contraintes = self.contraintes
-        domain = self.getSizedDictionnary(contraintes.tailleFixeVars)
+        domain = recupSousDictionnaire(self.dictionnaire, contraintes.tailleFixeVars)
         queue = contraintes.valeurCommuneVars.keys()
         while queue:
             numVar = queue.pop(0)
-            val = contraintes.valeurCommuneVars[num_var]
+            neighbors = list(contraintes.valeurCommuneVars[numVar])
+            val = neighbors.pop(0)
             numVarX = numVar
             numVarY = val[1]
             indX = val[0]
             indY = val[2]
             dX = domain[contraintes.tailleFixeVars[numVarX]]
             dY = domain[contraintes.tailleFixeVars[numVarY]]
-            if revised(dX, dY, indX, indV):
+            if revised(dX, dY, indX, indY):
                 if not dX:
                     return False
                 else:
-                    neighbors = self.getNeighbors(numVarX)
-                    neighbors.remove(numVarY)
-                    for numVarK in neighbors:
-                        queue.append(numVarK)
+                    contraintes.valeurCommuneVars[numVar].append(neighbors)
             return True
 
     def forwardChecking(self, variables, curr_instance):
@@ -301,9 +309,6 @@ class GrilleMots:
         @return assignment or False
         """
         #TODO
-
-class Dictionnaire:
-    #TODO
 
 
 class Contraintes:
