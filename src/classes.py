@@ -287,13 +287,14 @@ class Solver:
             numVarY = val[1]
             indX = val[0]
             indY = val[2]
-            dX = domain[contraintes.tailleFixeVars[numVarX]]
-            dY = domain[contraintes.tailleFixeVars[numVarY]]
+            dX = domain.get(contraintes.tailleFixeVars[numVarX], [])
+            dY = domain.get(contraintes.tailleFixeVars[numVarY], [])
             if revised(dX, dY, indX, indY):
                 if not dX:
                     return False
                 else:
                     contraintes.valeurCommuneVars[numVar] = neighbors
+                    queue.append(numVar)
             return True
 
     def forwardChecking(self, variables, curr_instance):
