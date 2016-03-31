@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import re
-import numpy as np
+import gestDict as dic
 import gestIO as io
+import os
+from tools import ABS_PATH_PRINC
 from PyQt4 import QtGui, QtCore
 
 M_MIN = 3
@@ -12,13 +13,13 @@ M_MAX = 70
 N_MIN = 3
 N_MAX = 70
 
-OBST_MIN = 0
-OBST_MAX = 0
+NOIRES_MIN = 0
+NOIRES_MAX = 0
 E_OBST = 20
 VAL_MINMAX_OBST = M_MIN*N_MIN-4
 VAL_MAX_OBST = 70
 
-GRID_PATH = '/media/daphnehb/Lexar/RP/data/Grilles'
+GRID_PATH = ABS_PATH_PRINC+'/data/Grilles'
 
 COULEUR_PATH = "background-color: blue"
 COULEUR_NOIRE = "background-color: black"
@@ -32,9 +33,9 @@ class CaractGrille(QtGui.QWidget):
     def __init__(self, statusBar,parent=None):
         super(CaractGrille, self).__init__(parent=parent)
         self.statusBar = statusBar
-        self.lignes = 0
-        self.colonnes = 0
-        self.nbCasesNoires = 0
+        self.lignes = M_MIN
+        self.colonnes = M_MAX
+        self.nbCasesNoires = NOIRES_MIN
         self.validButton = QtGui.QPushButton("Formulaire Valide")
         self.isCaract = True
         self.initUI()
@@ -45,21 +46,21 @@ class CaractGrille(QtGui.QWidget):
 
         nbLignesLbl = QtGui.QLabel('Nombre de lignes')
         nbColsLbl = QtGui.QLabel('Nombre de colonnes')
-        self.nbObstLbl = QtGui.QLabel('Nombre de cases noires')
+        self.nbNoiresLbl = QtGui.QLabel('Nombre de cases noires')
         
         nbLignesSlider = QtGui.QSlider(QtCore.Qt.Horizontal,self)
         nbLignesSlider.setToolTip("Entier compris entre {} et {}".format(M_MIN,M_MAX))
         nbColsSlider = QtGui.QSlider(QtCore.Qt.Horizontal,self)
         nbColsSlider.setToolTip("Entier compris entre {} et {}".format(N_MIN,N_MAX))
-        self.nbObstSlider = QtGui.QSlider(QtCore.Qt.Horizontal,self)
-        self.nbObstSlider.setToolTip("Entier compris entre {} et {}".format(0,OBST_MAX))
+        self.nbNoiresSlider = QtGui.QSlider(QtCore.Qt.Horizontal,self)
+        self.nbNoiresSlider.setToolTip("Entier compris entre {} et {}".format(0,NOIRES_MAX))
         
-        nbColsSlider.valueChanged[int].connect(self.changeNValue)
+        nbColsSlider.valueChanged[int].connect(self.changeColsValue)
         nbColsSlider.setRange(N_MIN,N_MAX)
-        nbLignesSlider.valueChanged[int].connect(self.changeMValue)
+        nbLignesSlider.valueChanged[int].connect(self.changeLignsValue)
         nbLignesSlider.setRange(M_MIN,M_MAX)
-        self.nbObstSlider.valueChanged[int].connect(self.changeObstValue)
-        self.nbObstSlider.setRange(0,OBST_MAX)
+        self.nbNoiresSlider.valueChanged[int].connect(self.changeNbNoiresValue)
+        self.nbNoiresSlider.setRange(NOIRES_MIN,NOIRES_MAX)
         
         grid = QtGui.QGridLayout()
         grid.setSpacing(10)
@@ -70,8 +71,8 @@ class CaractGrille(QtGui.QWidget):
         grid.addWidget(nbColsLbl, 2, 0)
         grid.addWidget(nbColsSlider, 2, 1)
 
-        grid.addWidget(self.nbObstLbl, 3, 0)
-        grid.addWidget(self.nbObstSlider, 3, 1)
+        grid.addWidget(self.nbNoiresLbl, 3, 0)
+        grid.addWidget(self.nbNoiresSlider, 3, 1)
 
         
         vbox.addLayout(grid)
@@ -96,48 +97,26 @@ class CaractGrille(QtGui.QWidget):
         self.setWindowTitle(u'Caractéristiques de la grille')    
         self.show()
         
-    def changeMValue(self,value):
-        self.ligne = value
-        global OBST_MAX        
-        OBST_MAX = max(VAL_MINMAX_OBST,min(VAL_MAX_OBST,value*self.N-E_OBST))
-        self.nbObstSlider.setToolTip("Entier compris entre {} et {}".format(0,OBST_MAX))
-        self.nbObstSlider.setRange(0,OBST_MAX)
+    def changeLignsValue(self,value):
+        self.lignes = value
+        global NOIRES_MAX        
+        NOIRES_MAX = max(VAL_MINMAX_OBST,min(VAL_MAX_OBST,value*self.colonnes-E_OBST))
+        self.nbNoiresSlider.setToolTip("Entier compris entre {} et {}".format(NOIRES_MIN,NOIRES_MAX))
+        self.nbNoiresSlider.setRange(NOIRES_MIN,NOIRES_MAX)
         self.statusBar.showMessage("{} lignes, {} colonnes, {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
-        
-    def changeNValue(self,value):
+
+    def changeColsValue(self,value):
         self.colonnes = value
-        global OBST_MAX        
-        OBST_MAX = max(VAL_MINMAX_OBST,min(VAL_MAX_OBST,value*self.M-E_OBST))
-        self.nbObstSlider.setToolTip("Entier compris entre {} et {}".format(0,OBST_MAX))
-        self.nbObstSlider.setRange(0,OBST_MAX)
+        global NOIRES_MAX        
+        NOIRES_MAX = max(VAL_MINMAX_OBST,min(VAL_MAX_OBST,value*self.lignes-E_OBST))
+        self.nbNoiresSlider.setToolTip("Entier compris entre {} et {}".format(NOIRES_MIN,NOIRES_MAX))
+        self.nbNoiresSlider.setRange(NOIRES_MIN,NOIRES_MAX)
         self.statusBar.showMessage("{} lignes, {} colonnes, {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
 
-    def changeObstValue(self,value):
-        self.nbObstacles = value
+    def changeNbNoiresValue(self,value):
+        self.nbCasesNoires  = value
         self.statusBar.showMessage("{} lignes, {} colonnes, {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
-            
-    # TODO unuse
-    def validation(self):
-        """
-        Permet de verifier si le champ filename est correctement entré
-        """
-        # si le nom de fichier entré est vide
-        if self.filename=="":
-            QtGui.QMessageBox.warning(self,u"Fichier invalide",u"""Un nom de fichier doit être entré, avec une extension .txt""")
-        else:
-            # sinon il doit etre conforme a la regex
-            regx = re.compile("^[\w]+\.txt$") 
-            if not regx.match(self.filename) is None :
-            # le filename entré est valide
-            # on genere la grille            
-            # on emit le clic sur self.validButton a MaWindow.validCarac
-                self.validButton.click()
-            else :
-            # sinon on previent qu'il y a erreur
-                QtGui.QMessageBox.warning(self,u"""Fichier invalide""",u"Nom de fichier entré non valide\nVérifiez d'avoir bien mis l'extension .txt")
-                
 
-            
 class BoutonGrille(QtGui.QPushButton):
     SIZE = 50
     def __init__(self,coord,parent=None):
@@ -156,10 +135,10 @@ class BoutonGrille(QtGui.QPushButton):
         """
         pass
                 
-    def stateChange(self,noire=False):
+    def stateChange(self,noire):
         """
         Definit si la case est l'arrivee, le depart, un ostacle ou une simple case
-        etat = 1 pour obstacle, 2 pour depart, 3 pour arrivee
+        etat = 1 pour une case noire
         """
         self.isBlack = noire
         if noire:
@@ -184,9 +163,11 @@ class BoutonGrille(QtGui.QPushButton):
         
 class ChoixGrille(QtGui.QWidget):
     
-    def __init__(self, lign, cols, nbNoires,parent=None, prob = None):
+    def __init__(self, lign, cols, nbNoires, wordGrid = None, parent=None):
         super(ChoixGrille, self).__init__(parent=parent)
-        self.prob = prob
+        self.dico = parent.dico
+        # objet GrilleMots
+        self.wordGrid = wordGrid
         # nb de lignes de la grille
         self.lignes = lign
         # nb de colonnes de la grille
@@ -195,12 +176,16 @@ class ChoixGrille(QtGui.QWidget):
         self.etat = 0
         # nombre de cases noires à générer aléatoirement
         self.nbCasesNoires = nbNoires
-        # grille sauvegardée dans le fichier
+        # grille de 0 et de 1 sauvegardée dans le fichier
         self.grille = None
         # savoir dans quel widget on est
         self.isCaract = False
         # solution generee pour la grille actuellement affichée
         self.solutionAffichee = None
+        # options pour lire des multi-grid-file
+        self.nbGridz = 0
+        self.numGrid = 0
+        self.gridz = None
         #print self.parentWidget.truc
         self.initUI()
         
@@ -216,34 +201,29 @@ class ChoixGrille(QtGui.QWidget):
         # on cree la liste de possibilites: case noire ou résolution
         noireBut = QtGui.QPushButton('Case Noire',self)
         noireBut.setCheckable(True)
-        noireBut.setIcon(QtGui.QIcon('IMG/mur.jpg'))
         noireBut.setIconSize(QtCore.QSize(BoutonGrille.SIZE,BoutonGrille.SIZE))
         noireBut.clicked[bool].connect(self.changeEtat)
         noireBut.setToolTip(u"Case Noire : ne peut contenir aucune lettre")
-        # orientation
-        combo = QtGui.QComboBox(self)
-        combo.addItem("Nord")
-        combo.addItem("Sud")
-        combo.addItem("Est")
-        combo.addItem("Ouest")
-        combo.setCurrentIndex(combo.findText(self.orientation))
-        combo.activated[str].connect(self.orientationChanged)
         
-        self.orientCombo = combo
         self.noireBut = noireBut
         
         vbox.addStretch(1)
         vbox.addWidget(noireBut)
-        vbox.addWidget(combo)
         vbox.addStretch(1)
 
         # generation de la grille        
-        if self.prob is None:
+        if self.wordGrid is None:
             # on genere aléatoirement une grille avec les parametres precedemment entres
             # le nombre d'obstacles, le depart et l'arrivee pourront etre modifiés a tout moment
             self.genereGrille()
         else:
-            self.affichProblem(self.prob)
+            # on place la 
+            # on recupere le 1er objet grille de la liste
+            self.gridz = self.wordGrid
+            self.wordGrid = self.wordGrid[0]
+            self.numGrid = 0
+            self.nbGridz = len(self.gridz)
+            self.affichGrille(self.wordGrid)
 
         # layout compliqués pour que les point de la grille se serrent entre eux
         vLayout = QtGui.QVBoxLayout()
@@ -273,11 +253,14 @@ class ChoixGrille(QtGui.QWidget):
         self.show()
         
     def genereGrille(self):
-        # on genere un probleme aleatoirement
-        prob = io.Problem.genere_prob(self.lignes,self.colonnes,self.nbCasesNoires)
-        # on recupere le depart et l'arrivee et la grille
-        self.grille = prob.grille
+        # on genere une grille de mots aleatoirement
+        self.grilleMots = io.GrilleMots.genere_grid(self.lignes,self.colonnes,self.nbCasesNoires)
+        # on recupere la grille
+        self.grille = self.grilleMots.grille
         
+        # une seule grille => pas d'option multi
+        self.nbGridz = 1
+        self.numGrid = 0
         # remplissage du gridLayout
         grid = QtGui.QGridLayout()
         butt = []
@@ -319,66 +302,21 @@ class ChoixGrille(QtGui.QWidget):
         
         etat = self.etat
         caseNoire = sender.isBlack
-        # c'est un obstacle
+        # c'est une case noire
         if etat==1:
-            # si un obstacle peut etre poser ici alors on le pose
-            if self.verifObstacle(x,y) :
-                # si x ne vaut pas ligne max et y ne vaut pas colonnes max
-                # ie si on n'est pas sur une des cases contenant un rail mais pas d'obstacle
-                if not (x==self.lignes or y==self.colonnes):
-                    # on verifie qu'aucun n'est déja arrivee ou depart
-                    if not caseNoire:
-                        self.grille[x][y] = 1
-                    else:
-                        self.grille[x][y] = 0
-                sender.stateChange(etat)
+            # si une case noire peut etre posee ici alors on la pose
+            # si x ne vaut pas ligne max et y ne vaut pas colonnes max
+            # ie si on n'est pas sur une des cases contenant un rail mais pas d'obstacle
+            if (x<self.lignes and y<self.colonnes):
+                # on met la case en noire ou blanche selon son etat precedent
+                if caseNoire:
+                    self.grille[x][y] = 0
+                else:
+                    self.grille[x][y] = 1
+                    sender.stateChange(self.grille[x,y]==1)
             else:
-                QtGui.QMessageBox.warning(self,"Mouvement impossible",u"Un obstacle ne peut être posé en ({},{})".format(x,y))
-    
-    def verifObstacle(self,x,y):
-        """
-        Permet de verfier si on peut reellement poser un obstacle a cet endroit
-        Verifie qu'aucun des 4 points n'est déjà l'arrivee ou le depart
-        Return true si le mouvement est possible, false sinon
-        """
-        wEst = (x,y+1)
-        wSud = (x+1,y)
-        wSudEst = (x+1,y+1)
-        # on recupere l'arrivee et le depart courant
-        depart = self.depart
-        arrivee =  self.arrivee
-        # si l'est n'est ni l'arrivee, ni un obstacle ou est vide
-        if ((wEst != arrivee and wEst != depart)
-            # et le sud non plus
-            and (wSud != arrivee and wSud != depart)
-            # et l'ouest non plus
-            and (wSudEst != arrivee and wSudEst != depart)
-           ):
-            # alors x,y peut etre un obstacle
-            return True
-        else:
-            return False
-    def verifCaseRobot(self,x,y):
-        """
-        Verifie que la case x,y est une où le robot peut se poser
-        Ie x-1,y; x,y-1 et x-1,y-1 ne sont pas des obstcles
-        """
-        wNord = (x,y-1)
-        wOuest = (x-1,y)
-        wNordOuest = (x-1,y-1)
-        listObs = list(map(tuple,np.argwhere(self.grille==1)))
-        return (not 
-                (listObs.__contains__(wNord)
-                or listObs.__contains__(wOuest)
-                or listObs.__contains__(wNordOuest)))
-        
-    def orientationChanged(self,text): 
-        # si une solution a été générée 
-        # on l'efface
-        if not self.solutionAffichee is None:
-            self.effaceResolution()
-        self.orientation = str(text)
-        
+                QtGui.QMessageBox.warning(self,"Mouvement impossible",u"Une case noire ne peut être posé en ({},{})".format(x,y))
+
     def changeEtat(self,pressed):
         sender = self.sender()
         
@@ -397,11 +335,12 @@ class ChoixGrille(QtGui.QWidget):
             filename = str(QtGui.QFileDialog(self).getSaveFileName(self, "Sauvegarder la grille")) 
         if filename=="":
             return self.parent().filename
-        obs = io.Obstacles.findObstacles(self.grille)
-        orientName =  self.orientation.lower()
-        orient = io.Orientations[orientName]
-        prob = io.Problem(self.grille,self.depart,self.arrivee,orient,obs)
-        io.write_ProblemFile(filename,prob,True)
+        self.grilleMots = io.GrilleMots(self.grille,self.lignes,self.colonnes)
+        # TODO write file grille
+        if self.nbGridz==1:
+            io.write_GrilleFile(filename,[self.grilleMots],True)
+        else:
+            io.write_GrilleFile(filename,self.gridz,True)
         self.parent().isSavedFile = True
         return filename
         
@@ -410,12 +349,16 @@ class ChoixGrille(QtGui.QWidget):
         # on l'efface
         if not self.solutionAffichee is None:
             self.effaceResolution()
-        obs = io.Obstacles.findObstacles(self.grille)
-        orientName =  self.orientation.lower()
-        orient = io.Orientations[orientName]
-        prob = io.Problem(self.grille,self.depart,self.arrivee,orient,obs)
+        # recuperation d'un nouvel objet grille car il y a peut etre eu des modif
+        self.grilleMots = io.GrilleMots(self.grille,self.lignes,self.colonnes)
+        # recuperation du dictionnaire
+        if self.dico == {}:
+            self.chooseDico()
+        return None
+        
+        # resolution de la grille
         # generation de la solution
-        io.algos.Algorithm(prob)
+        # TODO : io.algos.Algorithm(prob)
         ####### recuperation de la solution
         filename = self.parent().filename
         # si aucune sauvegarde n'a été faite
@@ -436,6 +379,8 @@ class ChoixGrille(QtGui.QWidget):
             else:
                 ok=False
         # on traite la reponse
+        # TODO : resoudre + write solution file
+        return None
         if ok:
             io.write_ProblemFile(filename,prob)
             io.write_SolutionFile(filename,[prob])
@@ -450,6 +395,9 @@ class ChoixGrille(QtGui.QWidget):
         """
         Affiche sur l'interfaceChoixGrille actuelle le chemin en colorant les case en bleu
         """
+        # TODO : resoudre
+        return None
+        
         chemin = self.solutionAffichee
         if chemin is None:
             exit
@@ -489,6 +437,8 @@ class ChoixGrille(QtGui.QWidget):
         """
         Retire de l'interfaceChoixGrille actuelle le chemin en colorant les case en bleu
         """
+        # TODO : resoudre
+        return None
         chemin = self.solutionAffichee
         if chemin is None:
             exit
@@ -522,22 +472,17 @@ class ChoixGrille(QtGui.QWidget):
                 precPt = point
             widgGrille.itemAtPosition(*point).widget().setStyleSheet(Scolor)
     
-    def affichProblem(self,prob):
-        # on recupere le depart et l'arrivee et la grille
-        self.grille = prob.grille
-        self.depart = prob.depart
-        self.arrivee = prob.arrivee
-        self.M = prob.nbLigne
-        self.N = prob.nbCol
-        self.orientCombo.setCurrentIndex(self.orientCombo.findText(prob.orientation.name,QtCore.Qt.MatchFixedString))
-        self.orientation = prob.orientation.name
-        self.nbObstacles = prob.obstacles.nbObstacles()
+    def affichGrille(self,grid):
+        # on recupere la grille
+        self.grille = grid.grille
+        self.lignes = grid.height
+        self.colonnes = grid.width
         # remplissage du gridLayout
         grid = QtGui.QGridLayout()
         butt = []
-        for i in range(self.M+1):
+        for i in range(self.lignes):
             l = []
-            for j in range(self.N+1):
+            for j in range(self.colonnes):
                 button = BoutonGrille((i,j),self)
                 button.setMaximumSize(BoutonGrille.SIZE,BoutonGrille.SIZE)
                 button.setBaseSize(20,20)    
@@ -546,14 +491,8 @@ class ChoixGrille(QtGui.QWidget):
                 button.clicked.connect(self.clicked)
                 button.setStatusTip(button.__str__())
                 
-                # si ce point est l'arrivee
-                if (i,j)==self.arrivee:
-                    button.stateChange(3)
-                # si ce point est le depart
-                elif (i,j)==self.depart:
-                    button.stateChange(2)
-                # si ce point est un obstacle
-                elif i<self.M and j<self.N and self.grille[i,j]==1:
+                # si ce point est une case noire
+                if i<self.lignes and j<self.colonnes and self.grille[i,j]==1:
                     button.stateChange(1)
                 # end if
                 l.append(button)
@@ -564,15 +503,33 @@ class ChoixGrille(QtGui.QWidget):
         grid.setSpacing(0)
         self.gridLay = grid
      
+    def chooseDico(self):
+        # on recupere le nom de la grille avec un QInputDialog
+        fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Choisir Dictionnaire',dic.DICO_PATH))
+        fname =  os.path.basename(fname)
+        # si aucun nom sélectionné
+        if fname=="":
+            QtGui.QMessageBox.critical(self,u"truc Fichier {} invalide".format(fname),u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
+            fname = None
+        # on recupere le dico
+        try:
+            dic.recupDictionnaire([fname])
+        except Exception:
+            dic.recupDictionnaire([dic.DICT_DEF])
+            QtGui.QMessageBox.critical(self,u"Fichier {} invalide".format(fname),u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
+        self.dico = dic.DICTIONNAIRE
+        #print self.dico
+        
+                 
 class MaWindow(QtGui.QMainWindow):
     
     def __init__(self,parent=None):
         super(MaWindow, self).__init__()
-        self.M = 0
-        self.N = 0
-        self.nbObstacles = 0
-        self.depart = None
-        self.arrivee = None
+        self.dico = dic.DICTIONNAIRE
+        self.lignes = 0
+        self.colonnes = 0
+        self.nbCasesNoires  = 0
+        self.nbVariables = 0
         self.filename = None
         self.isSavedFile = False
         choice_widget = CaractGrille(self.statusBar(),self)
@@ -619,6 +576,12 @@ class MaWindow(QtGui.QMainWindow):
         resoutAction.setToolTip(u'Résout la grille avec sauvegarde de la grille et de la solution')
         resoutAction.triggered.connect(self.resoudreGrille)
         
+        # menu changement de dictionnaire
+        changeDicAction = QtGui.QAction('&Sauver sous',self)
+        changeDicAction.setShortcut('Ctrl+Shift+S')
+        changeDicAction.setStatusTip("Change le dictionnaire courant")
+        changeDicAction.triggered.connect(self.changeDico)
+        
         # menu
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
@@ -631,20 +594,27 @@ class MaWindow(QtGui.QMainWindow):
         optionGrille.addAction(sauvSousAction)
         optionGrille.addAction(resoutAction)
         
+        # TODO : choix du dictionnaire
+        toolGrille = menubar.addMenu('&Outils')
+#        toolGrille.addAction(addDico)
+ #       toolGrille.addAction(sauvSousAction)
+        toolGrille.addAction(resoutAction)
+        
         self.resize(600,500)
-        self.setWindowTitle('Fenetre Principale')
+        self.setWindowTitle(u'Mes Mots Croisés')
         self.show()
         self.center()
          
     def validCaract(self):
         # on recupere M,N et filename du children CaractGrille
-        self.M = self.centralWidget().M
-        self.N = self.centralWidget().N
+        self.lignes = self.centralWidget().lignes
+        self.colonnes = self.centralWidget().colonnes
         # on verifie que le nombre d'obstacles choisi n'est pas trop grand
-        self.nbObstacles = self.centralWidget().nbObstacles
-        # on cree le prochain panel (ChoixGrille) avec les M et N entrés précédemment
-        grille_widget = ChoixGrille(self.M,self.N,self.nbObstacles,self)
+        self.nbCasesNoires  = self.centralWidget().nbCasesNoires
+        # on cree le prochain panel (ChoixGrille) avec les nb lignes et nb colonnes entrés précédemment
+        grille_widget = ChoixGrille(self.lignes,self.colonnes,self.nbCasesNoires, None, self)
         self.setCentralWidget(grille_widget)
+        sys.stdout.write("grille {}*{} avec {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
         
     def sauvegarderGrille(self):
         widg = self.centralWidget()
@@ -685,24 +655,26 @@ class MaWindow(QtGui.QMainWindow):
         choice_widget = CaractGrille(self.statusBar(),self)
         choice_widget.validButton.clicked.connect(self.validCaract)        
         self.setCentralWidget(choice_widget)
-        self.resize(400,400)
+        #self.resize(400,400)
 
     def openGrille(self):
         # on recupere le nom de la grille avec un QInputDialog
-        fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Ouvrir Fichier', 
-                FILE_PATH))
+        fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Ouvrir Fichier',io.GRID_PATH))
         # si aucun nom sélectionné
         if fname=="":
             return None
         
         # on genere la grille
-        probs = io.read_file(fname)
-        if probs is None:
+        try:
+            gridz = io.read_file(fname)
+        except:
+            gridz = None
+        if gridz is None:
             QtGui.QMessageBox.critical(self,u"Fichier {} invalide".format(fname),u"Le fichier entré génère des erreurs et ne renvoie rien de bon")
             return None
         #for p in probs:
         # on cree le prochain panel (ChoixGrille) avec les M et N entrés précédemment
-        grille_widget = ChoixGrille(self.M,self.N,self.nbObstacles,self, probs[0])
+        grille_widget = ChoixGrille(self.lignes,self.colonnes,self.nbCasesNoires, gridz, self)
         self.setCentralWidget(grille_widget)
         self.filename = fname
         

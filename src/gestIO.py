@@ -1,51 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Nov 11 17:23:58 2015
+Created on Thu Mar 24 22:18:40 2016
 
-@author: daphne
+@author: daphnehb
 """
-
+import os
 from classes import *
 #import algos
-import os
+from tools import OUT_STREAM,ABS_PATH_PRINC
 
-GRID_PATH = "../data/Grilles/"
-DICO_PATH = "../data/Dicos/"
 
-################# LECTURE D'UN FICHIER ##########
-# on fait confiance à l'utilisateur: le fichier est conforme au format attendu
-def read_bloc(M,N, Mlignes) :
-    """
-    Lecture du fichier contenant les données dun problème
-    
-    """
-    obstacles = Obstacles()
-    # on construit la grille de taille M*N
-    grille = np.zeros((M,N),int)
-    # on remplit la grille
-    for i in range(M) :
-        grille[i] = np.array(map(int,Mlignes[i].split()))
-        # on ajoute les obstacles au probleme
-        for j in range(N):
-            if (grille[i][j]==1):
-                obstacles.addObstacle(i,j)
-            # end if
-        # end for j
-    # end for i
-    # on recupere les points de depart et d'arrive ainsi que l'orientation initiale
-    XD, YD, XA, YA, o = Mlignes[M].split()
-    pointDep = (int(XD),int(YD))
-    pointArr = (int(XA),int(YA))
-    orient = Orientations[o]
-    
-    # (grille, point_depart, point_arrivee, orientation)
-    prob = Problem(grille, pointDep,pointArr,orient,obstacles)
-    return prob
+GRID_PATH = ABS_PATH_PRINC+"/data/Grilles/"
+
 
 def read_file(filename) :
     """
     Lit le fichier filename
-    et renvoie la liste des problemes y étant
+    et renvoie la liste des grilles y étant
     """
     monfile = None
     try:
@@ -55,10 +26,10 @@ def read_file(filename) :
             monfile = open(GRID_PATH+filename,'r')
         except:
             #QtGui.QMessageBox.critical(QtGui.QApplication(),u"Fichier inexistant", u"Le fichier {} n'existe pas et n'est pas dans {}".format(filename,PATH_FILE))
-            print "Fichiers {} et {} inexistants".format(filename,PATH_FILE+filename)
+            OUT_STREAM.write("Fichiers {} et {} inexistants".format(filename,PATH_FILE+filename))
             return None
             
-    print "File {} exite".format(filename)
+    OUT_STREAM.write("\nLe fichier {} existe\n".format(filename))
     line = ""
     # liste des problemes
     # 1 probleme correspondant a un bloc
@@ -76,9 +47,9 @@ def read_file(filename) :
             # sinon il s'agit d'encore un bloc à sauvegarder
             # on recupere la taille de la grille du prochain bloc en int
             lignes,colonnes = map(int,(line.split()))
-            Mlignes = []
+            Mlignes = ""
             for j in range(lignes+1) :
-                Mlignes.append(monfile.readline().rstrip())
+                Mlignes+=monfile.readline()
             # on recupere le probleme correspondant a ce bloc
             #blocProb.append(read_bloc(lignes,colonnes,Mlignes))
             blocProb.append(GrilleMots(Mlignes,lignes,colonnes))
@@ -88,110 +59,76 @@ def read_file(filename) :
     except ValueError:
         # TODO
         #QtGui.QMessageBox.critical(QtGui.QApplication(),u"Fichier invalide", u"Le fichier {} ne correspond pas à une grille".format(filename))
-        print "Fichier {} invalide : ce n'est pas une grille".format(filename)
-        return None
+        OUT_STREAM.write("Fichier {} invalide : ce n'est pas une grille".format(filename))
+        monfile.close()
+        return blocProb
+    monfile.close()
     return blocProb
         
 # Lecture du fichier
-def selctProb(filename):
+def selectProb(filename):
     """
-    Lit le fichier filename et affiche les problemes y étant
+    Lit le fichier filename et affiche les grilles y étant enregistrées
     """
     grilles = read_file(filename)
     if grilles is []:
         return None
     # affichage des probleme du fichier filename
     for k in grilles :
+        # TODO : not working -> OUT_STREAM.write(k)
         print k
-
+        print k.contraintes
+        
 ################# ECRITURE D'UN PROBLEME DANS UN FICHIER ##########
     
 def write_EntryFile(filename,listeTuple, pathOk = False) :
     """
-    Genere autant de problemes qu'il y a de tuple dans la liste
+    Genere autant de grilles aleatoires qu'il y a de tuple dans la liste
     et les ecrit dans un fichier filename écrasé
     """
     
-    if not os.path.exists(PATH_FILE) and not pathOk: 
-        os.makedirs(PATH_FILE) 
+    if not os.path.exists(GRID_PATH) and not pathOk: 
+        os.makedirs(GRID_PATH)
 
-    path = PATH_FILE+""+filename if not pathOk else filename
+    path = GRID_PATH+""+filename if not pathOk else filename
     # on ecrase le precedent contenu du fichier
     with open(path,'w') as monfile:
         for tuplet in listeTuple :
             # on genere le probleme correspondant
-            M,N,nb = tuplet
-            prob = Problem.genere_prob(M,N,nb)
+            # TODO : TO TRY ligns,cols,nb = tuplet
+            grid = GrilleMots.genere_grid(*tuplet)
             # on ajoute son affichage file au file en question
-            monfile.write(prob.str_writeEntryFile())
+            monfile.write(grid.str_writeEntryFile())
     
         # on declare la fin du fichier
         monfile.write("\n0 0")
         
-def write_ProblemFile(filename,prob,pathOk=False) :
+def write_GrilleFile(filename,gridz,pathOk=False) :
     """
-    Genere autant de problemes qu'il y a de tuple dans la liste
-    et les ecrit dans un fichier filename écrasé
+    Ecrit toutes les grilles de la liste dans un fichier filename écrasé
     """
-    if not os.path.exists(PATH_FILE) and not pathOk: 
-        os.makedirs(PATH_FILE) 
+    if not os.path.exists(GRID_PATH) and not pathOk: 
+        os.makedirs(GRID_PATH) 
 
-    path = PATH_FILE+""+filename if not pathOk else filename
+    path = GRID_PATH+""+filename if not pathOk else filename
     # on ecrase le precedent contenu du fichier
     monfile = None
-    try:
-        monfile = open(path,'w')
-    except:
+    for grid in gridz:
         try:
-            monfile = open(filename,'w')
+            monfile = open(path,'w')
         except:
-            print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
-            return None
-
-    # on ajoute son affichage file au file en question
-    monfile.write(prob.str_writeEntryFile())
+            try:
+                monfile = open(filename,'w')
+            except:
+                print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
+                return None
+    
+        # on ajoute son affichage file au file en question
+        monfile.write(grid.str_writeEntryFile())
+        monfile.write("\n")
+    # end for
 
     # on declare la fin du fichier
     monfile.write("\n0 0")
     monfile.close()
 
-################# ECRITURE DE LA SOLUTION D'UN PROBLEME DANS UN FICHIER ##########
-    
-def write_SolutionFile(filename,problemes,pathOk=False) :
-    """
-    Prend un liste de probleme en parametre
-    Genere autant de bloc solution que de problemes s'il n'y en a pas deja
-    et les ecrit dans un fichier solution_filename écrasé
-    Renvoie la liste des temps d'execution de la resolution pour chaque probleme
-    """
-    tabTps = list()
-    if not os.path.exists(PATH_FILE) and not pathOk: 
-        os.makedirs(PATH_FILE) 
-
-    path = PATH_FILE+"solution_"+filename if not pathOk else filename
-    # on ecrase le precedent contenu du fichier
-    monfile = None
-    try:
-        monfile = open(path,'w')
-    except:
-        try:
-            monfile = open("solution_"+filename,'w')
-        except:
-            print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
-            return None
-    if problemes is None:
-        return None
-        
-    for prob in problemes :
-        # si la solution du probleme n'a pas deja eté générée            
-        if prob.solutionFile is None:
-            # on lance la resolution du probleme correspondant
-            algos.Algorithm(prob)
-        # on ajoute son affichage file au file en question
-        monfile.write(prob.str_writeSolutionFile())
-        tabTps.append(prob.tpsSolution)
-        # fin du fichier
-        monfile.write("\n")
-    # end for
-    monfile.close()    
-    return tabTps

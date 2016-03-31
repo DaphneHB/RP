@@ -9,7 +9,7 @@ from error_tools import FinProgException
 from tools import ABS_PATH_PRINC,OUT_STREAM
 
 DICO_PATH = ABS_PATH_PRINC+"/data/Dicos/"
-
+DICT_DEF = "850-mots-us.txt"
 DICT_FNAME = "850-mots-us.txt"
 
 ################# LECTURE D'UN FICHIER DICTIONNAIRE ##########
@@ -22,44 +22,41 @@ DICTIONNAIRE = dict()
     Lit le fichier filename
     et rempli le dico DICTIONNAIRE contenant tous les mots
 """
-def recupSousDictionnaire(dictionnaire=DICTIONNAIRE, tailles=DICTIONNAIRE.keys()):
-    # récupére uniqument les mots de taille dans tailles
-    return {k:v for k, v in dictionnaire.items() if k in tailles}
-
-def recupDictionnaire(liste_fname=None):
-    # on vide le dictionnaire courant
-    clearDico()
+def recupDictionnaire(liste_fname=None, clear=True):
+    if clear:
+        # on vide le dictionnaire courant
+        clearDico()
     # si le fichier à charger est le fichier par defaut
     if liste_fname is None or liste_fname==[]:
         remplirDico()
     # sinon on remplit le dico avec tous les nom de fichier de la liste
     else:
-        global DICT_FNAME
+        global DICT_FNAME, DICTIONNAIRE
         for name in liste_fname:
             DICT_FNAME = name
             try:
                 remplirDico()
             except FinProgException:
-                OUT_STREAM.write("Le fichier {} n'a pu être chargé...\n".format(name))
+                OUT_STREAM.write("Le fichier {} n'a pu etre chargé...\n".format(name))
         #end for
-        # si aucun fichier n'était valide, le dico reste vide
-        if DICTIONNAIRE=={}:
-            raise FinProgException("Aucun fichier ne correspondait à un dictionnaire.\n")
-        # end if
     # end if
-
+    # si aucun fichier n'était valide, le dico reste vide
+    if DICTIONNAIRE == {}:
+        raise FinProgException(u"Aucun fichier ne correspondait a un dictionnaire.\n")
+    # end if
+    
 def remplirDico():
     # on récuère le dictionnaire global
     global DICTIONNAIRE
-
+    
     monfile = None
-
+    
     filename = DICO_PATH+DICT_FNAME
     try :
         monfile = open(filename,"r")
     except IOError:
         raise FinProgException('Fichier {} inexitant!\n'.format(DICO_PATH+DICT_FNAME))
-
+    
     OUT_STREAM.write("Récupération du dictionnaire contenu dans {}\n".format(DICO_PATH+DICT_FNAME))
     line = "\n"
     # tant que ce n'est pas la fin du fichier
@@ -68,7 +65,7 @@ def remplirDico():
         line = monfile.readline()
         # tant que ce sont des lignes vides
         while line=="\n":
-            line =monfile.readline()
+            line = monfile.readline()
         # si la dernière ligne non vide est la fin du fichier
         if line=="":
             break;
@@ -85,11 +82,11 @@ def remplirDico():
     # end while
     monfile.close()
     # en fonction
-
+        
 def clearDico():
     global DICTIONNAIRE
-    DICTIONNAIRE = dict()
-
+    DICTIONNAIRE = dict()    
+    
 def afficheDico():
     global DICTIONNAIRE
     OUT_STREAM.write("\Dictionnaire: \n")

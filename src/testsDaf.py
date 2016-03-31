@@ -7,7 +7,7 @@ Created on Wed Mar 23 13:30:31 2016
 
 #import classes as cl
 import gestDict as dic
-import read
+import gestIO as io
 import classes as cl
 import error_tools as err
 
@@ -15,14 +15,14 @@ import error_tools as err
 # to charge it multiple dictionnaires
 dic.recupDictionnaire()
 #dic.recupDictionnaire(["133000-mots-us.txt","850-mots-us.txt"])
-dic.afficheDico()
+#dic.afficheDico()
 # to clear the dico
 #dic.clearDico()
 
 
 
 ######### getting the grid
-grid = read.read_file("grille1.txt")[0]
+grid = io.read_file("grille1.txt")[0]
 print grid.contraintes
 print grid.setVarValue(1,"TRE")
 try:
@@ -31,3 +31,4 @@ except err.UnknownVarNbException:
     err.print_err("ERROR")
 gr = cl.GrilleMots.genere_grid(5,5,9)
 print gr.contraintes
+

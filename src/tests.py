@@ -7,12 +7,12 @@ Created on Wed Mar 23 13:30:31 2016
 
 import classes as cl
 import gestDict as dic
-import read
+import gestIO as io
 import error_tools as err
 
 dic.recupDictionnaire()
 
-grid = read.read_file("grille1.txt")[0]
+grid = io.read_file("grille1.txt")[0]
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
 print solver.ac3()
 
