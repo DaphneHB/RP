@@ -269,7 +269,7 @@ class Solver:
             @return 1-boolean (True if we remove a value)
             """
             revised = False
-            for motX in dX:
+            for motX in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
                 if not any(areLetterIntersect(motX, motY, indX, indY) for motY in dY):
                     revised = True
@@ -293,7 +293,7 @@ class Solver:
                 if not dX:
                     return False
                 else:
-                    contraintes.valeurCommuneVars[numVar].append(neighbors)
+                    contraintes.valeurCommuneVars[numVar] = neighbors
             return True
 
     def forwardChecking(self, variables, curr_instance):

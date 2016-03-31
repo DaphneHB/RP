@@ -14,5 +14,9 @@ dic.recupDictionnaire()
 
 grid = read.read_file("grille1.txt")[0]
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
+print solver.ac3()
 
+grid = cl.GrilleMots.genere_grid(10,10,10)
+print grid
+solver = cl.Solver(grid, dic.DICTIONNAIRE)
 print solver.ac3()
