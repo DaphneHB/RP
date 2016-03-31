@@ -161,6 +161,83 @@ class BoutonGrille(QtGui.QPushButton):
         string+="(ligne={},colonne={});".format(i,j)
         return string
         
+class GridObject(QtGui.QWidget):
+    MARGE = 100
+    def __init__(self, lign, cols, nbNoires, wordGrid,papa=None, parent=None):
+        super(GridObject, self).__init__(parent=parent)
+        # objet GrilleMots
+        self.wordGrid = wordGrid
+        # nb de lignes de la grille
+        self.lignes = lign
+        # nb de colonnes de la grille
+        self.colonnes = cols
+        # nombre de cases noires à générer aléatoirement
+        self.nbCasesNoires = nbNoires
+        # grille de 0 et de 1 sauvegardée dans le fichier
+        self.grille = None
+        # on recupere l'objet choixgrille parent
+        self.papaWidg = papa
+        
+        self.initUI()
+        
+    def initUI(self):
+        self.gridLay = QtGui.QGridLayout()
+        
+        # generation de la grille        
+        self.affichGrille(self.wordGrid)
+        # layout compliqués pour que les point de la grille se serrent entre eux
+        vLayout = QtGui.QVBoxLayout()
+        hLayout = QtGui.QHBoxLayout()
+        # on centre la grille dans son espace
+        hLayout.addStretch(1)
+        hLayout.addLayout(self.gridLay)
+        hLayout.addStretch(1)
+     
+        vLayout.addStretch(1)
+        vLayout.addLayout(hLayout)
+        vLayout.addStretch(1)
+        # fin layout compliqué
+        
+        self.setLayout(vLayout)
+        width = self.colonnes*BoutonGrille.SIZE+self.MARGE
+        height = self.lignes*BoutonGrille.SIZE+self.MARGE
+
+        self.setFixedSize(width,height)
+        self.show()
+        
+    def affichGrille(self,gridO):
+        self.lignes = gridO.height
+        self.colonnes = gridO.width
+        # on recupere la grille
+        self.grille = gridO.grille
+        # remplissage du gridLayout
+        grid = QtGui.QGridLayout()
+        butt = []
+        for i in range(self.lignes):
+            l = []
+            for j in range(self.colonnes):
+                button = BoutonGrille((i,j),self)
+                button.setMaximumSize(BoutonGrille.SIZE,BoutonGrille.SIZE)
+                button.setBaseSize(20,20)    
+                grid.setColumnMinimumWidth(j,BoutonGrille.SIZE)
+                grid.addWidget(button, i,j)
+                button.clicked.connect(self.clicked)
+                button.setStatusTip(button.__str__())
+                # si ce point est une case noire
+                if self.grille[i,j]==1:
+                    button.stateChange(1)
+                # end if
+                l.append(button)
+            # end first for
+            butt.append(l)
+            grid.setRowMinimumHeight(i,BoutonGrille.SIZE)
+        # end 2e for
+        grid.setSpacing(0.5)
+        self.gridLay = grid
+     
+    def clicked(self):
+        self.papaWidg.clicked(self.sender())
+         
 class ChoixGrille(QtGui.QWidget):
     
     def __init__(self, lign, cols, nbNoires, wordGrid = None, parent=None):
@@ -192,13 +269,25 @@ class ChoixGrille(QtGui.QWidget):
         
     def initUI(self):
         principal_box = QtGui.QHBoxLayout(self)
-
+        self.gridLayout = QtGui.QGridLayout()
         topleft = QtGui.QFrame(self)
         topleft.setFrameShape(QtGui.QFrame.StyledPanel)
  
         bottomleft = QtGui.QFrame(self)
         bottomleft.setFrameShape(QtGui.QFrame.StyledPanel)
-
+        
+        ### liste des dico a utiliser
+        dicsLay = QtGui.QHBoxLayout()
+        bottomleft.setLayout(dicsLay)
+        self.listDicsWidg = QtGui.QListWidget()
+        self.listDicsWidg.itemActivated.connect(self.removeAction)
+        dicsLay.addWidget(self.listDicsWidg)
+        for f in self.parent().listDics:
+            item = QtGui.QListWidgetItem(f)
+            #item.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+            #item.addAction(self.remAction)
+            self.listDicsWidg.addItem(item)
+        
         right = QtGui.QFrame(self)
         right.setFrameShape(QtGui.QFrame.StyledPanel)
 
@@ -215,7 +304,6 @@ class ChoixGrille(QtGui.QWidget):
         
         
         principal_box.addWidget(splitter2,1)
-        QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('Cleanlooks'))
         
         # bouton d'obstacle, d'arrivee et de depart
         vbox = QtGui.QVBoxLayout()
@@ -238,28 +326,30 @@ class ChoixGrille(QtGui.QWidget):
         if self.wordGrid is None:
             # on genere aléatoirement une grille avec les parametres precedemment entres
             # le nombre d'obstacles, le depart et l'arrivee pourront etre modifiés a tout moment
-            self.genereGrille()
+            self.genereGrille()            
         else:
             # on recupere le 1er objet grille de la liste
             self.gridz = self.wordGrid
             self.wordGrid = self.wordGrid[0]
             self.numGrid = 0
             self.nbGridz = len(self.gridz)
-            self.affichGrille(self.wordGrid)
 
-        # layout compliqués pour que les point de la grille se serrent entre eux
-        vLayout = QtGui.QVBoxLayout()
-        hLayout = QtGui.QHBoxLayout()
-        # on centre la grille dans son espace
-        hLayout.addStretch(1)
-        hLayout.addLayout(self.gridLay)
-        hLayout.addStretch(1)
-        vLayout.addStretch(1)
-        vLayout.addLayout(hLayout)
-        vLayout.addStretch(1)
-        # fin layout compliqué
+        # dans les deux cas on affiche la grille
+        self.gridWidget = GridObject(self.lignes,self.colonnes,self.nbCasesNoires,self.wordGrid,papa=self,parent=self)
+        
+        # on liste toutes les grilles du fichier ouvert ou creees
+        combo = QtGui.QComboBox(self)
+        for i in range(self.nbGridz):
+            combo.addItem('Grille {}'.format(i+1))
+        #combo.setCurrentIndex(combo.findText(self.numGrid))
+        combo.activated[str].connect(self.changeGridView)
+        
+        self.gridCombo = combo
+        vbox.addWidget(self.gridCombo)
+        
+        self.gridLayout.addWidget(self.gridWidget)
 
-        right.setLayout(vLayout)
+        right.setLayout(self.gridLayout)
         
         wmax = self.parent().width()
         hmax = self.parent().height()
@@ -267,15 +357,20 @@ class ChoixGrille(QtGui.QWidget):
         self.setWindowTitle('Grille')
         self.show()
         
+    def removeAction(self):
+        self.parent().removeDico()
+        
     def genereGrille(self):
         # on genere une grille de mots aleatoirement
-        self.grilleMots = io.GrilleMots.genere_grid(self.lignes,self.colonnes,self.nbCasesNoires)
+        self.wordGrid = io.GrilleMots.genere_grid(self.lignes,self.colonnes,self.nbCasesNoires)
         # on recupere la grille
-        self.grille = self.grilleMots.grille
+        self.grille = self.wordGrid.grille
         
         # une seule grille => pas d'option multi
+        self.gridz = [self.wordGrid]
         self.nbGridz = 1
         self.numGrid = 0
+        return None        
         # remplissage du gridLayout
         grid = QtGui.QGridLayout()
         butt = []
@@ -300,7 +395,7 @@ class ChoixGrille(QtGui.QWidget):
             grid.setRowMinimumHeight(i,BoutonGrille.SIZE)
         # end 2e for
         grid.setSpacing(0)
-        self.gridLay = grid
+        self.gridLayout = grid
         
     def resizeParent(self):
         caseCols = self.colonnes
@@ -310,15 +405,16 @@ class ChoixGrille(QtGui.QWidget):
         MaWindow.WIDTH = MaWindow.MARGE + caseCols*tailleBut
         MaWindow.HEIGHT = MaWindow.MARGE + caseLigns*tailleBut
          
-    def clicked(self):
+    def clicked(self,sender):
         """
         Fonction appelée au clic sur un bouton de la grille
         """
         # si une solution a été générée 
         # on l'efface
-        if not self.solutionAffichee is None:
+        
+        if False and not self.solutionAffichee is None:
             self.effaceResolution()
-        sender = self.sender()
+        #sender = self.sender()
         # on notifie au bouton d'aparaitre tel que l'etat le suggere
         # et on recupere les coordonnees de ce bouton pour changer la self.grille        
         x,y = sender.coordonnees
@@ -330,16 +426,22 @@ class ChoixGrille(QtGui.QWidget):
             # si une case noire peut etre posee ici alors on la pose
             # si x ne vaut pas ligne max et y ne vaut pas colonnes max
             # ie si on n'est pas sur une des cases contenant un rail mais pas d'obstacle
-            if (x<self.lignes and y<self.colonnes):
-                # on met la case en noire ou blanche selon son etat precedent
-                if caseNoire:
-                    self.grille[x][y] = 0
-                else:
-                    self.grille[x][y] = 1
-                    sender.stateChange(self.grille[x,y]==1)
+            # on met la case en noire ou blanche selon son etat precedent
+            if caseNoire:
+                self.grille[x][y] = 0
             else:
-                QtGui.QMessageBox.warning(self,"Mouvement impossible",u"Une case noire ne peut être posé en ({},{})".format(x,y))
+                self.grille[x][y] = 1
+            sender.stateChange(self.grille[x,y]==1)
+                
+    def changeGridView(self,text):
+        text = str(text).split()
+        num = int(text[1])-1
+        # si c'est le meme numero, on ne change rien
+        # ou s'il y a un soucis et que la grille num n'existe pas on ne fait rien
+        if not (num==self.numGrid or num>=self.nbGridz):
+            self.switchGrille(num)
 
+        
     def changeEtat(self,pressed):
         sender = self.sender()
         
@@ -358,12 +460,8 @@ class ChoixGrille(QtGui.QWidget):
             filename = str(QtGui.QFileDialog(self).getSaveFileName(self, "Sauvegarder la grille")) 
         if filename=="":
             return self.parent().filename
-        self.grilleMots = io.GrilleMots(self.grille,self.lignes,self.colonnes)
-        # TODO write file grille
-        if self.nbGridz==1:
-            io.write_GrilleFile(filename,[self.grilleMots],True)
-        else:
-            io.write_GrilleFile(filename,self.gridz,True)
+        self.gridz[self.numGrid] = io.GrilleMots(self.grille,self.lignes,self.colonnes)
+        io.write_GrilleFile(filename,self.gridz,True)
         self.parent().isSavedFile = True
         return filename
         
@@ -372,11 +470,10 @@ class ChoixGrille(QtGui.QWidget):
         # on l'efface
         if not self.solutionAffichee is None:
             self.effaceResolution()
+        # on charge les dicos
+        self.chargeDicos()
         # recuperation d'un nouvel objet grille car il y a peut etre eu des modif
-        self.grilleMots = io.GrilleMots(self.grille,self.lignes,self.colonnes)
-        # recuperation du dictionnaire
-        if self.dico == {}:
-            self.chooseDico()
+        self.wordGrid = io.GrilleMots(self.grille,self.lignes,self.colonnes)
         return None
         
         # resolution de la grille
@@ -496,11 +593,14 @@ class ChoixGrille(QtGui.QWidget):
             widgGrille.itemAtPosition(*point).widget().setStyleSheet(Scolor)
     
     def affichGrille(self,grid):
+        self.lignes = grid.height
+        self.colonnes = grid.width
         # on recupere la grille
         self.grille = grid.grille
         self.lignes = grid.height
         self.colonnes = grid.width
         # remplissage du gridLayout
+        return None        
         grid = QtGui.QGridLayout()
         butt = []
         for i in range(self.lignes):
@@ -513,9 +613,8 @@ class ChoixGrille(QtGui.QWidget):
                 grid.addWidget(button, i,j)
                 button.clicked.connect(self.clicked)
                 button.setStatusTip(button.__str__())
-                
                 # si ce point est une case noire
-                if i<self.lignes and j<self.colonnes and self.grille[i,j]==1:
+                if self.grille[i,j]==1:
                     button.stateChange(1)
                 # end if
                 l.append(button)
@@ -523,27 +622,45 @@ class ChoixGrille(QtGui.QWidget):
             butt.append(l)
             grid.setRowMinimumHeight(i,BoutonGrille.SIZE)
         # end 2e for
-        grid.setSpacing(0)
-        self.gridLay = grid
+        grid.setSpacing(0.5)
+        self.gridLayout = grid
      
-    def chooseDico(self):
-        # on recupere le nom de la grille avec un QInputDialog
-        fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Choisir Dictionnaire',dic.DICO_PATH))
-        fname =  os.path.basename(fname)
-        # si aucun nom sélectionné
-        if fname=="":
-            QtGui.QMessageBox.critical(self,u"truc Fichier {} invalide".format(fname),u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
-            fname = None
+    def switchGrille(self,nouv_num):
+        reply = QtGui.QMessageBox.question(self,u"Enregistrement",u"Voulez-vous écraser l'ancienne grille {} et enregistrer la nouvelle grille à la place?".format(self.numGrid+1),QtGui.QMessageBox.Yes | 
+            QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel, QtGui.QMessageBox.No)
+        if reply == QtGui.QMessageBox.Yes:
+            ok=True
+        elif reply == QtGui.QMessageBox.Cancel:
+           return None
+        else:
+            ok=False
+        if ok:
+            # on enregistre la grille courante si l'utilisateur le veut
+            self.gridz[self.numGrid] = io.GrilleMots(self.grille,self.lignes,self.colonnes)
+        # on change le panel courant
+        # on recupere le i-eme objet grille de la liste
+        self.wordGrid = self.gridz[nouv_num]
+        self.numGrid = nouv_num
+        nWidget = GridObject(self.lignes,self.colonnes,self.nbCasesNoires,self.wordGrid,papa=self,parent=self)
+        self.setNewPanel(nWidget)
+        
+    def setNewPanel(self, npanel):
+        for i in reversed(range(self.gridLayout.count())):
+            self.gridLayout.itemAt(i).widget().deleteLater()
+        self.gridWidget = npanel
+        self.gridLayout.addWidget(self.gridWidget)
+        
+    def chargeDicos(self):
         # on recupere le dico
         try:
-            dic.recupDictionnaire([fname])
-        except Exception:
+            dic.recupDictionnaire(self.parent().listDics)
+        except Exception as e:
+            print e
+            QtGui.QMessageBox.critical(self,u"Fichier invalide",u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
             dic.recupDictionnaire([dic.DICT_DEF])
-            QtGui.QMessageBox.critical(self,u"Fichier {} invalide".format(fname),u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
         self.dico = dic.DICTIONNAIRE
-        #print self.dico
+
         
-                 
 class MaWindow(QtGui.QMainWindow):
     MARGE = 200
     WIDTH = WINDOW_DEF_SIZE
@@ -552,6 +669,7 @@ class MaWindow(QtGui.QMainWindow):
     def __init__(self,parent=None):
         super(MaWindow, self).__init__()
         self.dico = dic.DICTIONNAIRE
+        self.listDics = []
         self.lignes = 0
         self.colonnes = 0
         self.nbCasesNoires  = 0
@@ -563,7 +681,10 @@ class MaWindow(QtGui.QMainWindow):
         self.setCentralWidget(choice_widget)
         self.initUI()
         
-    def initUI(self):  
+    def initUI(self):
+        # super look?
+        #QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('Cleanlooks'))
+        
         wMax = QtGui.QDesktopWidget().availableGeometry().width()-200
         hMax = QtGui.QDesktopWidget().availableGeometry().height()-200
         self.setMaximumSize(wMax,hMax)
@@ -603,15 +724,15 @@ class MaWindow(QtGui.QMainWindow):
         resoutAction.triggered.connect(self.resoudreGrille)
         
         # menu changement de dictionnaire
-        changeDicAction = QtGui.QAction('&Changer le dictionnaire courant',self)
-        changeDicAction.setShortcut('Ctrl+Shift+D')
-        changeDicAction.setStatusTip("Change le dictionnaire courant")
-        changeDicAction.triggered.connect(self.changeDico)
+        removeDicAction = QtGui.QAction('&Supprimer dictionnaire',self)
+        removeDicAction.setShortcut('Ctrl+Shift+R')
+        removeDicAction.setStatusTip("Supprime un dictionnaire")
+        removeDicAction.triggered.connect(self.removeDico)
         
         # menu changement de dictionnaire
-        addDicAction = QtGui.QAction('&Sauve sous',self)
-        addDicAction.setShortcut('Ctrl+Shift+S')
-        addDicAction.setStatusTip("Change le dictionnaire courant")
+        addDicAction = QtGui.QAction('&Ajouter un dictionnaire',self)
+        addDicAction.setShortcut('Ctrl+Shift+A')
+        addDicAction.setStatusTip("Ajoute un dictionnaire")
         addDicAction.triggered.connect(self.addDico)
         
         # menu
@@ -626,11 +747,9 @@ class MaWindow(QtGui.QMainWindow):
         optionGrille.addAction(sauvSousAction)
         optionGrille.addAction(resoutAction)
         
-        # TODO : choix du dictionnaire
         toolGrille = menubar.addMenu('&Outils')
-        toolGrille.addAction(changeDicAction)
- #       toolGrille.addAction(sauvSousAction)
-        toolGrille.addAction(resoutAction)
+        toolGrille.addAction(addDicAction)
+        toolGrille.addAction(removeDicAction)
         
         self.setWindowTitle(u'Mes Mots Croisés')
         self.show()
@@ -648,13 +767,41 @@ class MaWindow(QtGui.QMainWindow):
         self.setCentralWidget(grille_widget)
         self.resizing()
         self.center()
-        sys.stdout.write("grille {}*{} avec {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
-        
-    def changeDico(self):
-        pass
+        sys.stdout.write("\n\t----> Grille {}*{} avec {} cases noires\n".format(self.lignes,self.colonnes,self.nbCasesNoires))
+     
+    def modifDicsList(self,filename,add=True):
+        if filename is None or filename=="":
+            return None
+        if add:
+            self.listDics.append(filename)
+            item = QtGui.QListWidgetItem(filename)
+            #item.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+            #item.addAction(self.remAction)
+            if not self.centralWidget().isCaract:
+                self.centralWidget().listDicsWidg.addItem(item)
+        else:
+            # on retire un dico de la liste
+            self.listDics.remove(filename)
+            if not self.centralWidget().isCaract:
+                self.centralWidget().listDicsWidg.takeItem(self.centralWidget().listDicsWidg.currentRow())
+                
+    def chooseDico(self):
+        # on recupere le nom du dico avec un QInputDialog
+        fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Choisir Dictionnaire',dic.DICO_PATH))
+        fname =  os.path.basename(fname)
+        # si aucun nom sélectionné
+        if fname=="":
+            QtGui.QMessageBox.critical(self,u"Fichier invalide",u"Aucun fichier choisi")
+            fname = None
+        return fname
     
     def addDico(self):
-        pass
+        filename = self.chooseDico()
+        self.modifDicsList(filename,add=True)
+
+    def removeDico(self):
+        fname = self.centralWidget().listDicsWidg.currentItem().text()
+        self.modifDicsList(fname,add=False)
     
     def sauvegarderGrille(self):
         widg = self.centralWidget()
@@ -685,6 +832,9 @@ class MaWindow(QtGui.QMainWindow):
         else :
             self.statusBar().showMessage(u"Résolution de la grille en cours")
             # on recupere le chemin generé
+            # si le dico est vide on en charge un
+            if self.dico == {}:
+                self.chooseDico()
             resolu = widg.resoutProblem()
             if resolu is None:
                 self.statusBar().showMessage(u"Aucune solution trouvée")            
@@ -730,12 +880,15 @@ class MaWindow(QtGui.QMainWindow):
             self.validCaract()
            
     def resizing(self):
+        self.WIDTH = max(self.WIDTH,WINDOW_DEF_SIZE)
+        self.HEIGHT = max(self.HEIGHT,WINDOW_DEF_SIZE)
         # on resize si la taille doit changer selon la grille
         self.setFixedSize(self.WIDTH,self.HEIGHT)
             
     def center(self):
-        self.move(QtGui.QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
-        
+        resolution = QtGui.QDesktopWidget().screenGeometry()
+        self.move((resolution.width() / 2) - (self.frameSize().width() / 2),
+                  (resolution.height() / 2) - (self.frameSize().height() / 2))
     def closeEvent(self, event):
         # si on etait sur le Widget CaractGrille, rien a faire
         if not self.centralWidget().isCaract and not self.isSavedFile:
