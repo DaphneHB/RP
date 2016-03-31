@@ -8,6 +8,7 @@ Created on Thu Mar 17 12:55:22 2016
 import numpy as np
 import random
 from enum import Enum
+from copy import deepcopy
 import tools
 import error_tools as err
 from gestDict import recupSousDictionnaire
@@ -252,8 +253,10 @@ class Solver:
         self.dictionnaire = dictionnaire
         self.variables = grid.variables
         self.contraintes = grid.contraintes
+        self.domain = {X: deepcopy(
+                self.dictionnaire.get(self.contraintes.tailleFixeVars[X], set())
+                ) for X in self.variables}
 
-    ############### Check arc-consistency in CSP data structure ###############
     def ac3(self):
         """
         Check arc-consistency in CSP data structure
@@ -277,7 +280,6 @@ class Solver:
             return revised
 
         contraintes = self.contraintes
-        domain = recupSousDictionnaire(self.dictionnaire, contraintes.tailleFixeVars)
         queue = contraintes.valeurCommuneVars.keys()
         while queue:
             numVar = queue.pop(0)
@@ -287,8 +289,8 @@ class Solver:
             numVarY = val[1]
             indX = val[0]
             indY = val[2]
-            dX = domain.get(contraintes.tailleFixeVars[numVarX], [])
-            dY = domain.get(contraintes.tailleFixeVars[numVarY], [])
+            dX = self.domain[numVarX]
+            dY = self.domain[numVarY]
             if revised(dX, dY, indX, indY):
                 if not dX:
                     return False
