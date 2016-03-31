@@ -15,16 +15,16 @@ class Orientation(Enum):
     """
     Enumération des orientation possible d'un mot (en ligne:horizontal ou en colonne:vertical)
 
-    """    
+    """
     HORIZONTAL = 0
     VERTICAL = 1
-    
+
     def __str__(self):
         return str(self.name)
 
 
 class GrilleMots:
-    
+
     def __init__(self,grille, nbLignes, nbCols):
         self.height = nbLignes
         self.width = nbCols
@@ -41,7 +41,7 @@ class GrilleMots:
         self.recupGrid(grille)
         self.constructGrille()
 
-        
+
     def recupGrid(self, grille):
         # si c'est une liste de string
         if tools.isList(grille):
@@ -66,7 +66,7 @@ class GrilleMots:
             self.grille = grille
         else:
             raise err.FinProgException("La grille a mal ete lue")
-        
+
     def constructGrille(self):
         grille = self.grille
         nouvMot = True
@@ -149,7 +149,7 @@ class GrilleMots:
         self.enregistreNouvMot(iMot,jMot,numMot,tailleMot,Orientation.VERTICAL)
         ## on recupere les contraintes de croisement de toutes les variables
         self.buildConstraints()
-        
+
     """
     Enregistre le mot numMot de taille tailleMot et ajoute la contrainte correspondante
     """
@@ -166,7 +166,7 @@ class GrilleMots:
             self.vertic_var.update({numMot:var})
         # on incremente le nombre de mots
         self.nbMots += 1
-        
+
     def buildConstraints(self):
         # pour chaque variable on sauvegarde les contraintes qui lui sont liées
         # les variables horizontales ne croisant que les variables verticales et inversement
@@ -188,8 +188,8 @@ class GrilleMots:
                 # end if
             # end for
         # end for
-        #end        
-    
+        #end
+
     """
     Vérifie que ce mot est imaginable pour le mot numMot
     """
@@ -208,16 +208,16 @@ class GrilleMots:
             return True
         else:
             return False
-        
+
     def __str__(self):
         print self.str_grille
         string = "Grille {}*{} avec {} mots\n".format(self.height,self.width,self.nbMots)
-        
+
         # pour chaque variable on affiche ses caracteristiques
         for num,val in self.variables.iteritems():
             string+= "\tMot {} commençant en {}, avec {} lettres et en direction {}\n".format(num,val[0],val[1],val[2])
         return str(string)
-    
+
     ##################### GENERATION ALEATOIRE D'UNE GRILLE #################
     @staticmethod
     def genere_grid(lignes,colonnes,nbCasesNoires) :
@@ -230,7 +230,7 @@ class GrilleMots:
         # on place les cases noires
         if nbCasesNoires>=lignes*colonnes :
             print("ERREUR : {} cases noires ≥ {} (taille de la grille)".format(nbCasesNoires,lignes*colonnes))
-            return None           
+            return None
         for i in range(nbCasesNoires) :
             # tant qu'aucun x, y n'est valide
             while True :
@@ -243,9 +243,52 @@ class GrilleMots:
                     break;
         grille_mots = GrilleMots(grille,lignes,colonnes)
         return grille_mots
-        
+
+    ############### Check arc-consistency in CSP data structure ###############
+    def ac3(self, contraintes):
+        """
+        Check arc-consistency in CSP data structure
+        @return 1-boolean
+        """
+        def areLetterIntersect(motX, motY, indH, indV):
+            return motX[inH] == motY[indV]
+
+        def revised(dX, indX, indV):
+            for motX in dX:
+                for motY in dY:
+                    if areLetterIntersect(motX, motY, indX, indV):
+                        return True
+            dX.remove(motX)
+            return False
+
+        domain = self.getSizedDictionnary(contraintes.tailleFixeVars)
+        queue = contraintes.valeurCommuneVars.keys()
+        while queue:
+            numVar = queue.pop(0)
+            val = contraintes.valeurCommuneVars[num_var]
+            numVarX = numVar
+            numVarY = val[1]
+            indX = val[0]
+            indY = val[2]
+            dX = domain[contraintes.tailleFixeVars[numVarX]]
+            dY = domain[contraintes.tailleFixeVars[numVarY]]
+            if revised(dX, dY, indX, indV):
+                if not dX:
+                    return False
+                else:
+                neighbors = self.getNeighbors(numVarX)
+                neighbors.remove(numVarY)
+                for numVarK in neighbors:
+                    queue.append(#TODO)
+            return True
+
+
+class Dictionnaire:
+    #TODO
+
+
 class Contraintes:
-    
+
     def __init__(self, nbLignes,nbColonnes):
         # un dictionnaire de set {numX: {(indX,numVarY,indY), (indX,numVarZ,indZ)}}
         self.valeurCommuneVars = dict()
@@ -254,18 +297,18 @@ class Contraintes:
         # dico car accès en O(1)
         self.tailleFixeVars = dict()
         #self.matrixConst = ContrainteMatrix(nbLignes,nbColonnes)
-    
+
     def areConstraintsVerified(self,num_var,str_mot,variables):
         if not self.tailleFixeVars.has_key(num_var):
             raise err.UnknownVarNbException(num_var)
         return self.isLengthVerified(num_var,len(str_mot)) and self.allDiffVars(num_var,str_mot,variables) and self.areLettersVerified(num_var,str_mot,variables)
-    
+
     def isLengthVerified(self,num_var,length):
         if self.tailleFixeVars[num_var]==length:
             return True
         else:
             raise err.WrongLengthException(num_var,length)
-        
+
     def areLettersVerified(self,num_var,str_mot,variables):
         # s'il n'y a aucune contrainte d'intersection avec ce mot c'est ok
         if not self.valeurCommuneVars.has_key(num_var):
@@ -286,10 +329,10 @@ class Contraintes:
                 # end if
             # end for
         return True
-        
+
     def addLengthConstraint(self,num_var,length):
         self.tailleFixeVars[num_var] = length
-    
+
     def addCommonIndexConstraint(self,num_varX, indX, num_varY,indY):
         # si la case de dictionnaire existe deja
         if self.valeurCommuneVars.has_key(num_varX):
@@ -298,10 +341,10 @@ class Contraintes:
         else: # sinon on la cree
             setX = set()
         # on ajoute l'intersection
-        setX.add((indX,num_varY,indY))          
+        setX.add((indX,num_varY,indY))
         # on update le dictionnaire de contraintes
         self.valeurCommuneVars.update({num_varX:setX})
-        
+
     def allDiffVars(self,num_var,str_mot,variables):
         print str_mot
         for num,var in variables:
@@ -312,7 +355,7 @@ class Contraintes:
             if var[3]==str_mot:
                 raise err.SimilarWordException(num_var,num,str_mot)
         return True
-        
+
     def __str__(self):
         string = "Contraintes de la grille:\n"
         # on affiche les contraintes joliment et dans l'ordre croissant
