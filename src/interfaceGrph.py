@@ -8,16 +8,18 @@ import os
 from tools import ABS_PATH_PRINC
 from PyQt4 import QtGui, QtCore
 
+WINDOW_DEF_SIZE = 600
+
 M_MIN = 3
-M_MAX = 70
+M_MAX = 20
 N_MIN = 3
-N_MAX = 70
+N_MAX = 20
 
 NOIRES_MIN = 0
 NOIRES_MAX = 0
 E_OBST = 20
 VAL_MINMAX_OBST = M_MIN*N_MIN-4
-VAL_MAX_OBST = 70
+VAL_MAX_OBST = 30
 
 GRID_PATH = ABS_PATH_PRINC+'/data/Grilles'
 
@@ -38,6 +40,8 @@ class CaractGrille(QtGui.QWidget):
         self.nbCasesNoires = NOIRES_MIN
         self.validButton = QtGui.QPushButton("Formulaire Valide")
         self.isCaract = True
+        # Taille par defaut
+        MaWindow.HEIGHT = MaWindow.WIDTH = WINDOW_DEF_SIZE
         self.initUI()
         
     def initUI(self):
@@ -118,12 +122,13 @@ class CaractGrille(QtGui.QWidget):
         self.statusBar.showMessage("{} lignes, {} colonnes, {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
 
 class BoutonGrille(QtGui.QPushButton):
-    SIZE = 50
+    SIZE = 25
     def __init__(self,coord,parent=None):
         super(BoutonGrille,self).__init__(parent)
         self.coordonnees = coord
         # c'est une case noire
         self.isBlack = False
+        self.setFixedSize(self.SIZE,self.SIZE)
         self.setStyleSheet(COULEUR_DEF)
         self.initUI()
         
@@ -156,11 +161,6 @@ class BoutonGrille(QtGui.QPushButton):
         string+="(ligne={},colonne={});".format(i,j)
         return string
         
-    def sizieHint(self):
-    
-        return QtCore.QSize(20, 20)
-    
-        
 class ChoixGrille(QtGui.QWidget):
     
     def __init__(self, lign, cols, nbNoires, wordGrid = None, parent=None):
@@ -186,16 +186,40 @@ class ChoixGrille(QtGui.QWidget):
         self.nbGridz = 0
         self.numGrid = 0
         self.gridz = None
-        #print self.parentWidget.truc
+        # on resize le parent pour recuperer les bonnes tailles
+        self.resizeParent()
         self.initUI()
         
     def initUI(self):
+        principal_box = QtGui.QHBoxLayout(self)
+
+        topleft = QtGui.QFrame(self)
+        topleft.setFrameShape(QtGui.QFrame.StyledPanel)
+ 
+        bottomleft = QtGui.QFrame(self)
+        bottomleft.setFrameShape(QtGui.QFrame.StyledPanel)
+
+        right = QtGui.QFrame(self)
+        right.setFrameShape(QtGui.QFrame.StyledPanel)
+
+        splitter1 = QtGui.QSplitter(QtCore.Qt.Vertical)
+        splitter1.addWidget(topleft)
+        splitter1.addWidget(bottomleft)
+        
+        splitter2 = QtGui.QSplitter(QtCore.Qt.Horizontal)
+        splitter2.addWidget(splitter1)
+        splitter2.addWidget(right)
+        
+        splitter1.setSizes([self.parent().height()/4.,self.parent().height()*3/4.])
+        splitter2.setSizes([self.parent().width()/3.,self.parent().width()*2/3.])
+        
+        
+        principal_box.addWidget(splitter2,1)
+        QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('Cleanlooks'))
+        
         # bouton d'obstacle, d'arrivee et de depart
         vbox = QtGui.QVBoxLayout()
-        # ligne avec la grille et les bouton
-        hboxGrille = QtGui.QHBoxLayout()  
-        principal_box = QtGui.QVBoxLayout()
-
+        
         self.setLayout(principal_box)
         
         # on cree la liste de possibilites: case noire ou résolution
@@ -207,17 +231,15 @@ class ChoixGrille(QtGui.QWidget):
         
         self.noireBut = noireBut
         
-        vbox.addStretch(1)
         vbox.addWidget(noireBut)
-        vbox.addStretch(1)
-
+        topleft.setLayout(vbox)
+        
         # generation de la grille        
         if self.wordGrid is None:
             # on genere aléatoirement une grille avec les parametres precedemment entres
             # le nombre d'obstacles, le depart et l'arrivee pourront etre modifiés a tout moment
             self.genereGrille()
         else:
-            # on place la 
             # on recupere le 1er objet grille de la liste
             self.gridz = self.wordGrid
             self.wordGrid = self.wordGrid[0]
@@ -232,19 +254,12 @@ class ChoixGrille(QtGui.QWidget):
         hLayout.addStretch(1)
         hLayout.addLayout(self.gridLay)
         hLayout.addStretch(1)
+        vLayout.addStretch(1)
         vLayout.addLayout(hLayout)
-        # on pousse la grille en haut de la fenetre
         vLayout.addStretch(1)
         # fin layout compliqué
 
-        hboxGrille.addLayout(vbox)
-        hboxGrille.addStretch(1)        
-        hboxGrille.addLayout(vLayout)
-        hboxGrille.addStretch(1)        
-        
-        principal_box.addStretch(1)
-        principal_box.addLayout(hboxGrille)
-        principal_box.addStretch(1)
+        right.setLayout(vLayout)
         
         wmax = self.parent().width()
         hmax = self.parent().height()
@@ -287,6 +302,14 @@ class ChoixGrille(QtGui.QWidget):
         grid.setSpacing(0)
         self.gridLay = grid
         
+    def resizeParent(self):
+        caseCols = self.colonnes
+        caseLigns = self.lignes
+        tailleBut = BoutonGrille.SIZE
+        # on recupere la nouvelle taille
+        MaWindow.WIDTH = MaWindow.MARGE + caseCols*tailleBut
+        MaWindow.HEIGHT = MaWindow.MARGE + caseLigns*tailleBut
+         
     def clicked(self):
         """
         Fonction appelée au clic sur un bouton de la grille
@@ -522,6 +545,9 @@ class ChoixGrille(QtGui.QWidget):
         
                  
 class MaWindow(QtGui.QMainWindow):
+    MARGE = 200
+    WIDTH = WINDOW_DEF_SIZE
+    HEIGHT = WINDOW_DEF_SIZE
     
     def __init__(self,parent=None):
         super(MaWindow, self).__init__()
@@ -577,10 +603,16 @@ class MaWindow(QtGui.QMainWindow):
         resoutAction.triggered.connect(self.resoudreGrille)
         
         # menu changement de dictionnaire
-        changeDicAction = QtGui.QAction('&Sauver sous',self)
-        changeDicAction.setShortcut('Ctrl+Shift+S')
+        changeDicAction = QtGui.QAction('&Changer le dictionnaire courant',self)
+        changeDicAction.setShortcut('Ctrl+Shift+D')
         changeDicAction.setStatusTip("Change le dictionnaire courant")
         changeDicAction.triggered.connect(self.changeDico)
+        
+        # menu changement de dictionnaire
+        addDicAction = QtGui.QAction('&Sauve sous',self)
+        addDicAction.setShortcut('Ctrl+Shift+S')
+        addDicAction.setStatusTip("Change le dictionnaire courant")
+        addDicAction.triggered.connect(self.addDico)
         
         # menu
         menubar = self.menuBar()
@@ -596,13 +628,13 @@ class MaWindow(QtGui.QMainWindow):
         
         # TODO : choix du dictionnaire
         toolGrille = menubar.addMenu('&Outils')
-#        toolGrille.addAction(addDico)
+        toolGrille.addAction(changeDicAction)
  #       toolGrille.addAction(sauvSousAction)
         toolGrille.addAction(resoutAction)
         
-        self.resize(600,500)
         self.setWindowTitle(u'Mes Mots Croisés')
         self.show()
+        self.resizing()
         self.center()
          
     def validCaract(self):
@@ -614,8 +646,16 @@ class MaWindow(QtGui.QMainWindow):
         # on cree le prochain panel (ChoixGrille) avec les nb lignes et nb colonnes entrés précédemment
         grille_widget = ChoixGrille(self.lignes,self.colonnes,self.nbCasesNoires, None, self)
         self.setCentralWidget(grille_widget)
+        self.resizing()
+        self.center()
         sys.stdout.write("grille {}*{} avec {} cases noires".format(self.lignes,self.colonnes,self.nbCasesNoires))
         
+    def changeDico(self):
+        pass
+    
+    def addDico(self):
+        pass
+    
     def sauvegarderGrille(self):
         widg = self.centralWidget()
         if widg.isCaract:
@@ -655,8 +695,9 @@ class MaWindow(QtGui.QMainWindow):
         choice_widget = CaractGrille(self.statusBar(),self)
         choice_widget.validButton.clicked.connect(self.validCaract)        
         self.setCentralWidget(choice_widget)
-        #self.resize(400,400)
-
+        self.resizing()
+        self.center()
+        
     def openGrille(self):
         # on recupere le nom de la grille avec un QInputDialog
         fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Ouvrir Fichier',io.GRID_PATH))
@@ -677,7 +718,9 @@ class MaWindow(QtGui.QMainWindow):
         grille_widget = ChoixGrille(self.lignes,self.colonnes,self.nbCasesNoires, gridz, self)
         self.setCentralWidget(grille_widget)
         self.filename = fname
-        
+        self.resizing()
+        self.center()
+
     def keyPressEvent(self, e):
         
         if e.key() == QtCore.Qt.Key_Escape:
@@ -685,13 +728,13 @@ class MaWindow(QtGui.QMainWindow):
         # si l'utilisateur appuie sur entrée alors qu'on est dans CaractGrille
         elif e.key() == QtCore.Qt.Key_Return and self.centralWidget().isCaract:
             self.validCaract()
-    
-    def sizeHint1(self):   
-        return QtCore.QSize(100, 100)
-        
+           
+    def resizing(self):
+        # on resize si la taille doit changer selon la grille
+        self.setFixedSize(self.WIDTH,self.HEIGHT)
+            
     def center(self):
         self.move(QtGui.QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
-        
         
     def closeEvent(self, event):
         # si on etait sur le Widget CaractGrille, rien a faire
