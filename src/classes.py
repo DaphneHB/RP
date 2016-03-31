@@ -245,7 +245,7 @@ class GrilleMots:
         return grille_mots
 
     ############### Check arc-consistency in CSP data structure ###############
-    def ac3(self, contraintes):
+    def ac3(self):
         """
         Check arc-consistency in CSP data structure
         @return 1-boolean
@@ -254,13 +254,19 @@ class GrilleMots:
             return motX[inH] == motY[indV]
 
         def revised(dX, indX, indV):
+            """
+            Update the domain of one variable by excluding the domain value
+            from the other variable
+            @return 1-boolean
+            """
+            revised = False
             for motX in dX:
-                for motY in dY:
-                    if areLetterIntersect(motX, motY, indX, indV):
-                        return True
-            dX.remove(motX)
-            return False
+                if not any(areLetterIntersect(motX, motY, indX, indV) for motY in dY):
+                    revised = True
+                    dX.remove(motX)
+            return revised
 
+        contraintes = self.contraintes
         domain = self.getSizedDictionnary(contraintes.tailleFixeVars)
         queue = contraintes.valeurCommuneVars.keys()
         while queue:
@@ -276,12 +282,25 @@ class GrilleMots:
                 if not dX:
                     return False
                 else:
-                neighbors = self.getNeighbors(numVarX)
-                neighbors.remove(numVarY)
-                for numVarK in neighbors:
-                    queue.append(#TODO)
+                    neighbors = self.getNeighbors(numVarX)
+                    neighbors.remove(numVarY)
+                    for numVarK in neighbors:
+                        queue.append(numVarK)
             return True
 
+    def forwardChecking(self, variables, curr_instance):
+        """
+        Inference finding in the neighbor variables
+        @return dict of inferences
+        """
+        #TODO
+
+    def backtrack(instance,csp):
+        """
+        Search for solution and add to assignment
+        @return assignment or False
+        """
+        #TODO
 
 class Dictionnaire:
     #TODO
