@@ -26,9 +26,9 @@ def read_file(filename) :
             monfile = open(GRID_PATH+filename,'r')
         except:
             #QtGui.QMessageBox.critical(QtGui.QApplication(),u"Fichier inexistant", u"Le fichier {} n'existe pas et n'est pas dans {}".format(filename,PATH_FILE))
-            OUT_STREAM.write("Fichiers {} et {} inexistants".format(filename,PATH_FILE+filename))
+            OUT_STREAM.write("Fichiers {} et {} inexistants".format(filename,GRID_PATH+filename))
             return None
-            
+
     OUT_STREAM.write("\nLe fichier {} existe\n".format(filename))
     line = ""
     # liste des problemes
@@ -64,7 +64,7 @@ def read_file(filename) :
         return blocProb
     monfile.close()
     return blocProb
-        
+
 # Lecture du fichier
 def selectProb(filename):
     """
@@ -78,16 +78,16 @@ def selectProb(filename):
         # TODO : not working -> OUT_STREAM.write(k)
         print k
         print k.contraintes
-        
+
 ################# ECRITURE D'UN PROBLEME DANS UN FICHIER ##########
-    
+
 def write_EntryFile(filename,listeTuple, pathOk = False) :
     """
     Genere autant de grilles aleatoires qu'il y a de tuple dans la liste
     et les ecrit dans un fichier filename écrasé
     """
-    
-    if not os.path.exists(GRID_PATH) and not pathOk: 
+
+    if not os.path.exists(GRID_PATH) and not pathOk:
         os.makedirs(GRID_PATH)
 
     path = GRID_PATH+""+filename if not pathOk else filename
@@ -99,16 +99,16 @@ def write_EntryFile(filename,listeTuple, pathOk = False) :
             grid = GrilleMots.genere_grid(*tuplet)
             # on ajoute son affichage file au file en question
             monfile.write(grid.str_writeEntryFile())
-    
+
         # on declare la fin du fichier
         monfile.write("\n0 0")
-        
+
 def write_GrilleFile(filename,gridz,pathOk=False) :
     """
     Ecrit toutes les grilles de la liste dans un fichier filename écrasé
     """
-    if not os.path.exists(GRID_PATH) and not pathOk: 
-        os.makedirs(GRID_PATH) 
+    if not os.path.exists(GRID_PATH) and not pathOk:
+        os.makedirs(GRID_PATH)
 
     path = GRID_PATH+""+filename if not pathOk else filename
     # on ecrase le precedent contenu du fichier
@@ -122,7 +122,7 @@ def write_GrilleFile(filename,gridz,pathOk=False) :
             except:
                 print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
                 return None
-    
+
         # on ajoute son affichage file au file en question
         monfile.write(grid.str_writeEntryFile())
         monfile.write("\n")
@@ -131,4 +131,3 @@ def write_GrilleFile(filename,gridz,pathOk=False) :
     # on declare la fin du fichier
     monfile.write("\n0 0")
     monfile.close()
-
