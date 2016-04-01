@@ -294,21 +294,20 @@ class Solver:
         contraintes = self.contraintes
         queue = contraintes.valeurCommuneVars.keys()
         while queue:
-            numVar = queue.pop(0)
-            neighbors = list(contraintes.valeurCommuneVars[numVar])
-            val = neighbors.pop(0)
-            numVarX = numVar
-            numVarY = val[1]
-            indX = val[0]
-            indY = val[2]
+            numVarX = queue.pop(0)
+            neighbors = contraintes.valeurCommuneVars[numVarX]
+            numVarY = neighbors.keys()[0]
+            indXY = neighbors.pop(neighbors.keys()[0])
+            indX = indXY[0]
+            indY = indXY[1]
             dX = self.domain[numVarX]
             dY = self.domain[numVarY]
             if revised(dX, dY, indX, indY):
                 if not dX:
                     return False
                 else:
-                    contraintes.valeurCommuneVars[numVar] = neighbors
-                    queue.append(numVar)
+                    contraintes.valeurCommuneVars[numVarX] = neighbors
+                    queue.append(numVarX)
             return True
 
     def mrv(self, instance):
@@ -321,13 +320,9 @@ class Solver:
         for numVar, d in self.domain.items():
             if len(d) > 0:
                 unassigned_x[numVar] = len(d)
-            else:
-                if not numVar in instance:
-                    verbose.append(numVar)
         for x in sorted(unassigned_x, key=unassigned_x.get):
             if x not in instance:
                 return x
-        print "Aucun résultat:", verbose, instance
         return False
 
     def isConsistent(self, numVar_1, v, numVar_2, vv):
@@ -335,10 +330,12 @@ class Solver:
         Checks that the assignment is consistent for this CSP.
         @return True if it is, False if there are conflicts.
         """
-        for indX, numVar_k, indY in self.getCommuneVars(numVar_1):
-            if numVar_k == numVar_2:
-                if not self.areLetterIntersect(v, vv, indX, indY):
-                    return False
+        try:
+            indX, indY = self.getCommuneVars(numVar_1)[numVar_2]
+            if not self.areLetterIntersect(v, vv, indX, indY):
+                return False
+        except KeyError:
+            pass
         return True
 
     def isComplete(self, instance):
@@ -351,12 +348,11 @@ class Solver:
                 return False
         return True
 
-    def check_forward(self, numVark, v, variables):
+    def checkForward(self, numVark, v, variables):
         """
         Build every instantiation with non conflicts between variables
         @return dict of instantiation
         """
-        consistent = True
         for numVarj in variables.keys():
             Dj = self.domain[numVarj]
             for vv in list(Dj):
@@ -366,7 +362,7 @@ class Solver:
                 return False
         return True
 
-    def forward_checking(self, variables, instance):
+    def forwardChecking(self, variables, instance):
         """
         Search for solution and add to assignment
         @return assignment or False
@@ -377,12 +373,12 @@ class Solver:
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
+        var_orig = deepcopy(variables)
+        dom_orig = deepcopy(self.domain)
         for v in self.domain[numVar]:
-            var_orig = deepcopy(variables)
-            dom_orig = deepcopy(self.domain)
-            if self.check_forward(numVar, v, variables):
+            if self.checkForward(numVar, v, variables):
                 instance[numVar] = v # Instanciation du mot
-                result = self.forward_checking(variables, instance)
+                result = self.forwardChecking(variables, instance)
                 if isinstance(result, dict): # isComplete(instance) is True
                     return result
                 del instance[numVar]
@@ -390,11 +386,19 @@ class Solver:
             self.domain = deepcopy(dom_orig)
         return False
 
+    def conflictBackJumping(self, variables, instance):
+        """
+        CBJ fait appel à la fonction consistante qui recoit une
+        instanciation et retourne l'ens des variables de la contrainte
+        violée si i est inconsistante.
+        @return assignment or False
+        """
+
 
 class Contraintes:
 
     def __init__(self, nbLignes,nbColonnes):
-        # un dictionnaire de set {numX: {(indX,numVarY,indY), (indX,numVarZ,indZ)}}
+        # un dictionnaire de set {numX: {numVarY : (indX,indY), numVarZ : (indX,indZ)}}
         self.valeurCommuneVars = dict()
         # pour les contraintes de tailles
         # a chaque indices -> un int correspondant a la taille max de la var au num de l'ind
@@ -421,13 +425,12 @@ class Contraintes:
             # sinon pour chaque contrainte d'intersection liee à ce mot
             # on verifie si pour l'autre variable, un mot a déja été placé
             # et donc si la contrainte d'egalite convient
-            for val in self.valeurCommuneVars[num_var]:
-                numY = val[1]
+            for numY, indXY in self.valeurCommuneVars[num_var].items():
                 varY = variables[numY]
                 motY = varY[3]
                 # on verifie que la val[indX]-ème lettre ==val[indY]-ème lettre
-                indX = val[0]
-                indY = val[2]
+                indX = indXY[0]
+                indY = indXY[1]
                 if not motY is None and str_mot[indX]!=motY[indY]:
                     raise err.DifferentLetterException(num_var,indX,numY,indY)
                 # end if
@@ -441,13 +444,13 @@ class Contraintes:
         # si la case de dictionnaire existe deja
         if self.valeurCommuneVars.has_key(num_varX):
             # on la recupere
-            setX = self.valeurCommuneVars[num_varX]
+            dictX = self.valeurCommuneVars[num_varX]
         else: # sinon on la cree
-            setX = set()
+            dictX = dict()
         # on ajoute l'intersection
-        setX.add((indX,num_varY,indY))
+        dictX[num_varY] = (indX, indY)
         # on update le dictionnaire de contraintes
-        self.valeurCommuneVars.update({num_varX:setX})
+        self.valeurCommuneVars.update({num_varX:dictX})
 
     def allDiffVars(self,num_var,str_mot,variables):
         #print str_mot
@@ -470,7 +473,7 @@ class Contraintes:
             # si cette variable est en contrainte avec d'autres
             if self.valeurCommuneVars.has_key(num):
                 string+="telle que "
-                for val in self.valeurCommuneVars[num]:
-                    string+="X{}[{}]==X{}[{}]   ".format(num,val[0],val[1],val[2])
+                for numX, indXY in self.valeurCommuneVars[num]:
+                    string+="X{}[{}]==X{}[{}]   ".format(num,indXY[0],numX,indXY[1])
             string+="\n"
         return string
