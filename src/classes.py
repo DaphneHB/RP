@@ -267,23 +267,41 @@ class Solver:
 
     def isComplete(self, instance):
         """
-        Check if assignment has complete assigned all domains.
+        Check if assignment has complete assigned all variables.
+        @param dict (key: numVar, value: current word) - current instantiation
         @return 1-boolean
         """
-        for numVar, _ in self.domain.items():
+        for numVar, _ in self.variables.items():
             if numVar not in instance.keys():
                 return False
         return True
 
     def getCommuneVars(self, numVar):
+        """
+        @param int (variable index)
+        @return neighbors dict (key: numVar, value: intersect position)
+        """
         return self.contraintes.valeurCommuneVars[numVar]
 
     def areLetterIntersect(self, motX, motY, indH, indV):
+        """
+        Intersect Constraint Check
+        @param 2-words, 2-letter index
+        @return 1-boolean True if valid else False
+        """
         return motX[indH] == motY[indV]
+
+    def areDifferentWords(self, motX, motY):
+        """
+        Word Diff Constraint Check
+        @return 1-boolean True if diff else False
+        """
+        return not motX == motY
 
     def isConsistent(self, numVar_1, v, numVar_2, vv):
         """
         Checks that the assignment is consistent for this CSP.
+        @param 2-int, 2-str
         @return True if it is, False if there are conflicts.
         """
         try:
@@ -292,7 +310,7 @@ class Solver:
                 return False
         except KeyError:
             pass
-        return not v == vv
+        return self.areDifferentWords(v, vv)
 
     def ac3(self):
         """
@@ -309,7 +327,6 @@ class Solver:
             revised = False
             for v in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
-                # any(self.areLetterIntersect(motX, motY, indX, indY) for motY in dY)
                 if not any(self.isConsistent(numVar_1, v, numVar_2, vv) for vv in dY):
                     revised = True
                     dX.remove(v)
@@ -371,7 +388,7 @@ class Solver:
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
-        random.shuffle(self.domain[numVar])
+        #random.shuffle(self.domain[numVar])
         var_orig = deepcopy(variables)
         dom_orig = deepcopy(self.domain)
         for v in self.domain[numVar]:
