@@ -393,6 +393,7 @@ class Solver:
         violée si i est inconsistante.
         @return assignment or False
         """
+        pass
 
 
 class Contraintes:
