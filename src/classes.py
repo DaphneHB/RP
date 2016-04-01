@@ -268,23 +268,6 @@ class Solver:
     def getCommuneVars(self, numVar):
         return self.contraintes.valeurCommuneVars[numVar]
 
-    def isConsistent(self, numVar_1, v, numVar_2, vv):
-        """
-        Checks that the assignment is consistent for this CSP.
-        @return True if it is, False if there are conflicts.
-        """
-        for indX, numVar_k, indY in self.getCommuneVars(numVar_1):
-            if numVar_k == numVar_2:
-                if not self.areLetterIntersect(v, vv, indX, indY):
-                    return False
-        return True
-
-    def isComplete(self, instance):
-        for numVar, _ in self.domain.items():
-            if numVar not in instance.keys():
-                return False
-        return True
-
     def areLetterIntersect(self, motX, motY, indH, indV):
         return motX[indH] == motY[indV]
 
@@ -336,7 +319,7 @@ class Solver:
         unassigned_x = {}
         verbose=[]
         for numVar, d in self.domain.items():
-            if len(d) > 1:
+            if len(d) > 0:
                 unassigned_x[numVar] = len(d)
             else:
                 if not numVar in instance:
@@ -347,7 +330,24 @@ class Solver:
         print "Aucun résultat:", verbose, instance
         return False
 
-    def check_forward(self, numVark, v, instance, variables):
+    def isConsistent(self, numVar_1, v, numVar_2, vv):
+        """
+        Checks that the assignment is consistent for this CSP.
+        @return True if it is, False if there are conflicts.
+        """
+        for indX, numVar_k, indY in self.getCommuneVars(numVar_1):
+            if numVar_k == numVar_2:
+                if not self.areLetterIntersect(v, vv, indX, indY):
+                    return False
+        return True
+
+    def isComplete(self, instance):
+        for numVar, _ in self.domain.items():
+            if numVar not in instance.keys():
+                return False
+        return True
+
+    def check_forward(self, numVark, v, variables):
         """
         Inference finding in the neighbor variables
         @return dict of inferences
@@ -359,31 +359,31 @@ class Solver:
                 if not self.isConsistent(numVark, v, numVarj, vv):
                     Dj.remove(vv)
             if not Dj:
-                consistent = False
-        return consistent
+                return False
+        return True
 
-    def forward_checking(self, instance, variables={}):
+    def forward_checking(self, variables, instance):
         """
         Search for solution and add to assignment
         @return assignment or False
         """
         if not variables:
-            variables = deepcopy(self.variables)
-
-        if self.isComplete(instance):
+            assert self.isComplete(instance)
             return instance
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
-        var_orig = deepcopy(variables)
         for v in self.domain[numVar]:
-            if self.check_forward(numVar, v, instance, variables):
+            var_orig = deepcopy(variables)
+            dom_orig = deepcopy(self.domain)
+            if self.check_forward(numVar, v, variables):
                 instance[numVar] = v # Instanciation du mot
-                result = self.forward_checking(instance, variables)
-                if isinstance(result, dict):
+                result = self.forward_checking(variables, instance)
+                if isinstance(result, dict): # isComplete(instance) is True
                     return result
+                del instance[numVar]
             variables = deepcopy(var_orig)
-        print instance
+            self.domain = deepcopy(dom_orig)
         return False
 
 
@@ -446,12 +446,12 @@ class Contraintes:
         self.valeurCommuneVars.update({num_varX:setX})
 
     def allDiffVars(self,num_var,str_mot,variables):
-        print str_mot
+        #print str_mot
         for num,var in variables.items():
             if num==num_var:
                 continue
             #sinon
-            print var[3]
+            #print var[3]
             if var[3]==str_mot:
                 pass
                 #TODO Enlever le commentaire

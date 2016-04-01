@@ -9,17 +9,18 @@ import classes as cl
 import gestDict as dic
 import gestIO as io
 import error_tools as err
+from copy import deepcopy
 
 dic.recupDictionnaire()
 
-grid = io.read_file("grille1.txt")[0]
-solver = cl.Solver(grid, dic.DICTIONNAIRE)
-print solver.ac3()
+# grid = io.read_file("grille1.txt")[0]
+# solver = cl.Solver(grid, dic.DICTIONNAIRE)
+# print solver.ac3()
 
-grid = cl.GrilleMots.genere_grid(10,10,9)
+grid = io.read_file("grille3.txt")[0]
 print grid
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
 solver.ac3()
-instance = solver.forward_checking({})
+instance = solver.forward_checking(deepcopy(solver.variables), {})
 print instance
 grid.fillGrid(instance)

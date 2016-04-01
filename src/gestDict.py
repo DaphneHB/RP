@@ -9,9 +9,10 @@ from error_tools import FinProgException
 from tools import ABS_PATH_PRINC,OUT_STREAM
 
 DICO_PATH = ABS_PATH_PRINC+"/data/Dicos/"
-DICT_DEF = "850-mots-us.txt"
-DICT_FNAME = "850-mots-us.txt"
-
+# DICT_DEF = "850-mots-us.txt"
+# DICT_FNAME = "850-mots-us.txt"
+DICT_DEF = "133000-mots-us.txt"
+DICT_FNAME = "133000-mots-us.txt"
 ################# LECTURE D'UN FICHIER DICTIONNAIRE ##########
 
 # le dictionnaire de mots utilisé pour lancer l'algo
@@ -44,19 +45,19 @@ def recupDictionnaire(liste_fname=None, clear=True):
     if DICTIONNAIRE == {}:
         raise FinProgException(u"Aucun fichier ne correspondait a un dictionnaire.\n")
     # end if
-    
+
 def remplirDico():
     # on récuère le dictionnaire global
     global DICTIONNAIRE
-    
+
     monfile = None
-    
+
     filename = DICO_PATH+DICT_FNAME
     try :
         monfile = open(filename,"r")
     except IOError:
         raise FinProgException('Fichier {} inexitant!\n'.format(DICO_PATH+DICT_FNAME))
-    
+
     OUT_STREAM.write("Récupération du dictionnaire contenu dans {}\n".format(DICO_PATH+DICT_FNAME))
     line = "\n"
     # tant que ce n'est pas la fin du fichier
@@ -82,11 +83,11 @@ def remplirDico():
     # end while
     monfile.close()
     # en fonction
-        
+
 def clearDico():
     global DICTIONNAIRE
-    DICTIONNAIRE = dict()    
-    
+    DICTIONNAIRE = dict()
+
 def afficheDico():
     global DICTIONNAIRE
     OUT_STREAM.write("\Dictionnaire: \n")
