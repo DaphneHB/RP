@@ -26,7 +26,7 @@ def read_file(filename) :
             monfile = open(GRID_PATH+filename,'r')
         except:
             #QtGui.QMessageBox.critical(QtGui.QApplication(),u"Fichier inexistant", u"Le fichier {} n'existe pas et n'est pas dans {}".format(filename,PATH_FILE))
-            OUT_STREAM.write("Fichiers {} et {} inexistants".format(filename,PATH_FILE+filename))
+            OUT_STREAM.write("Fichiers {} et {} inexistants".format(filename,GRID_PATH+filename))
             return None
             
     OUT_STREAM.write("\nLe fichier {} existe\n".format(filename))
