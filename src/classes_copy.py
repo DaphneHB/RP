@@ -268,19 +268,20 @@ class Solver:
     def getCommuneVars(self, numVar):
         return self.contraintes.valeurCommuneVars[numVar]
 
-    def isConsistent(self, numVar_1, v, numVar_2, vv):
+    def isConsistent(self, numVar, v):
         """
         Checks that the assignment is consistent for this CSP.
         @return True if it is, False if there are conflicts.
         """
-        for indX, numVar_k, indY in self.getCommuneVars(numVar_1):
-            if numVar_k == numVar_2:
-                if not self.areLetterIntersect(v, vv, indX, indY):
-                    return False
+        communeVars = self.getCommuneVars(numVar)
+        for indX, communeVar, indY in communeVars:
+            dY = self.domain[communeVar]
+            if not any(self.areLetterIntersect(v, motY, indX, indY) for motY in dY):
+                return False
         return True
 
     def isComplete(self, instance):
-        for numVar, _ in self.domain.items():
+        for numVar, _ in self.variables.items():
             if numVar not in instance.keys():
                 return False
         return True
@@ -347,43 +348,53 @@ class Solver:
         print "Aucun résultat:", verbose, instance
         return False
 
-    def check_forward(self, numVark, v, instance, variables):
+    def forwardCheck(self, instance, numVar, v):
         """
         Inference finding in the neighbor variables
         @return dict of inferences
         """
-        consistent = True
-        for numVarj in variables.keys():
-            Dj = self.domain[numVarj]
-            for vv in list(Dj):
-                if not self.isConsistent(numVark, v, numVarj, vv):
-                    Dj.remove(vv)
-            if not Dj:
-                consistent = False
-        return consistent
+        inferences = {}
+        communeVars = self.getCommuneVars(numVar)
+        for _, communeVar, _ in communeVars:
+            s = self.domain[communeVar]
+            if len(s) > 1 and v in s:
+                s = s - set([v])
+                self.domain[communeVar] = s
+                if len(s) == 1 and communeVar not in instance:
+                    inferences[communeVar] = list(s)[0]
+            inf_list = inferences.values()
+            for inf in inf_list:
+                if inf_list.count(inf) > 1:
+                    return False
+        return inferences
 
-    def forward_checking(self, instance, variables={}):
+    def backtrack(self, instance):
         """
         Search for solution and add to assignment
         @return assignment or False
         """
-        if not variables:
-            variables = deepcopy(self.variables)
-
         if self.isComplete(instance):
             return instance
 
         numVar = self.mrv(instance)
-        variables.pop(numVar, None)
-        var_orig = deepcopy(variables)
+        grid_orig = deepcopy(self.grid)
         for v in self.domain[numVar]:
-            if self.check_forward(numVar, v, instance, variables):
+            inferences = {}
+            if True or self.isConsistent(numVar, v):
                 instance[numVar] = v # Instanciation du mot
-                result = self.forward_checking(instance, variables)
-                if isinstance(result, dict):
-                    return result
-            variables = deepcopy(var_orig)
-        print instance
+                inferences = self.forwardCheck(instance, numVar, v)
+                if isinstance(inferences, dict):
+                    instance.update(inferences)
+                    result = self.backtrack(instance)
+                    if isinstance(result, dict):
+                        return result
+            else:
+                print "ok"
+            del instance[numVar]
+            if isinstance(inferences,dict):
+                for i in inferences:
+                    del instance[i]
+            self.grid = deepcopy(grid_orig)
         return False
 
 

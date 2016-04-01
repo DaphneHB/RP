@@ -20,6 +20,6 @@ grid = cl.GrilleMots.genere_grid(10,10,9)
 print grid
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
 solver.ac3()
-instance = solver.backtrack({})
+instance = solver.forward_checking({})
 print instance
 grid.fillGrid(instance)
