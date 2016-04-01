@@ -261,9 +261,19 @@ class Solver:
         self.dictionnaire = dictionnaire
         self.variables = grid.variables
         self.contraintes = grid.contraintes
-        self.domain = {X: deepcopy(
-                self.dictionnaire.get(self.contraintes.tailleFixeVars[X], set())
+        self.domain = {X: deepcopy(list(
+                self.dictionnaire.get(self.contraintes.tailleFixeVars[X], list()))
                 ) for X in self.variables}
+
+    def isComplete(self, instance):
+        """
+        Check if assignment has complete assigned all domains.
+        @return 1-boolean
+        """
+        for numVar, _ in self.domain.items():
+            if numVar not in instance.keys():
+                return False
+        return True
 
     def getCommuneVars(self, numVar):
         return self.contraintes.valeurCommuneVars[numVar]
@@ -271,24 +281,38 @@ class Solver:
     def areLetterIntersect(self, motX, motY, indH, indV):
         return motX[indH] == motY[indV]
 
+    def isConsistent(self, numVar_1, v, numVar_2, vv):
+        """
+        Checks that the assignment is consistent for this CSP.
+        @return True if it is, False if there are conflicts.
+        """
+        try:
+            indX, indY = self.getCommuneVars(numVar_1)[numVar_2]
+            if not self.areLetterIntersect(v, vv, indX, indY):
+                return False
+        except KeyError:
+            pass
+        return not v == vv
+
     def ac3(self):
         """
         Check arc-consistency in CSP data structure
         @return 1-boolean
         """
 
-        def revised(dX, dY, indX, indY):
+        def revised(dX, dY, numVar_1, numVar_2):
             """
             Update the domain of one variable by excluding the domain value
             from the other variable (Remove inconsistent values)
             @return 1-boolean (True if we remove a value)
             """
             revised = False
-            for motX in list(dX):
+            for v in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
-                if not any(self.areLetterIntersect(motX, motY, indX, indY) for motY in dY):
+                # any(self.areLetterIntersect(motX, motY, indX, indY) for motY in dY)
+                if not any(self.isConsistent(numVar_1, v, numVar_2, vv) for vv in dY):
                     revised = True
-                    dX.remove(motX)
+                    dX.remove(v)
             return revised
 
         contraintes = self.contraintes
@@ -297,12 +321,9 @@ class Solver:
             numVarX = queue.pop(0)
             neighbors = contraintes.valeurCommuneVars[numVarX]
             numVarY = neighbors.keys()[0]
-            indXY = neighbors.pop(neighbors.keys()[0])
-            indX = indXY[0]
-            indY = indXY[1]
             dX = self.domain[numVarX]
             dY = self.domain[numVarY]
-            if revised(dX, dY, indX, indY):
+            if revised(dX, dY, numVarX, numVarY):
                 if not dX:
                     return False
                 else:
@@ -324,29 +345,6 @@ class Solver:
             if x not in instance:
                 return x
         return False
-
-    def isConsistent(self, numVar_1, v, numVar_2, vv):
-        """
-        Checks that the assignment is consistent for this CSP.
-        @return True if it is, False if there are conflicts.
-        """
-        try:
-            indX, indY = self.getCommuneVars(numVar_1)[numVar_2]
-            if not self.areLetterIntersect(v, vv, indX, indY):
-                return False
-        except KeyError:
-            pass
-        return True
-
-    def isComplete(self, instance):
-        """
-        Check if assignment has complete assigned all domains.
-        @return 1-boolean
-        """
-        for numVar, _ in self.domain.items():
-            if numVar not in instance.keys():
-                return False
-        return True
 
     def checkForward(self, numVark, v, variables):
         """
@@ -373,6 +371,7 @@ class Solver:
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
+        random.shuffle(self.domain[numVar])
         var_orig = deepcopy(variables)
         dom_orig = deepcopy(self.domain)
         for v in self.domain[numVar]:
@@ -393,13 +392,12 @@ class Solver:
         violée si i est inconsistante.
         @return assignment or False
         """
-        pass
 
 
 class Contraintes:
 
     def __init__(self, nbLignes,nbColonnes):
-        # un dictionnaire de set {numX: {numVarY : (indX,indY), numVarZ : (indX,indZ)}}
+        # un dictionnaire de dict {numX: {numVarY : (indX,indY), numVarZ : (indX,indZ)}}
         self.valeurCommuneVars = dict()
         # pour les contraintes de tailles
         # a chaque indices -> un int correspondant a la taille max de la var au num de l'ind
@@ -461,9 +459,7 @@ class Contraintes:
             #sinon
             #print var[3]
             if var[3]==str_mot:
-                pass
-                #TODO Enlever le commentaire
-                #raise err.SimilarWordException(num_var,num,str_mot)
+                raise err.SimilarWordException(num_var,num,str_mot)
         return True
 
     def __str__(self):

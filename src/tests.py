@@ -28,3 +28,4 @@ instance = solver.forwardChecking(deepcopy(solver.variables), {})
 print time.time() - start # 13.18 to 13.73, 4.00 to 4.57
 
 print instance
+grid.fillGrid(instance)
