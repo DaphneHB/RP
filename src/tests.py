@@ -17,7 +17,7 @@ dic.recupDictionnaire()
 # solver = cl.Solver(grid, dic.DICTIONNAIRE)
 # print solver.ac3()
 
-grid = io.read_file("grille3.txt")[0]
+grid = io.read_file("grille4.txt")[0]
 print grid
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
 solver.ac3()

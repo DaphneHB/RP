@@ -342,6 +342,10 @@ class Solver:
         return True
 
     def isComplete(self, instance):
+        """
+        Check if assignment has complete assigned all domains.
+        @return 1-boolean
+        """
         for numVar, _ in self.domain.items():
             if numVar not in instance.keys():
                 return False
@@ -349,8 +353,8 @@ class Solver:
 
     def check_forward(self, numVark, v, variables):
         """
-        Inference finding in the neighbor variables
-        @return dict of inferences
+        Build every instantiation with non conflicts between variables
+        @return dict of instantiation
         """
         consistent = True
         for numVarj in variables.keys():
