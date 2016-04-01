@@ -16,7 +16,10 @@ grid = io.read_file("grille1.txt")[0]
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
 print solver.ac3()
 
-grid = cl.GrilleMots.genere_grid(30,30,100)
+grid = cl.GrilleMots.genere_grid(10,10,9)
 print grid
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
-print solver.ac3()
+solver.ac3()
+instance = solver.backtrack({})
+print instance
+grid.fillGrid(instance)

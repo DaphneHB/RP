@@ -8,6 +8,7 @@ Created on Thu Mar 17 12:55:22 2016
 import numpy as np
 import random
 from enum import Enum
+from copy import deepcopy
 import tools
 import error_tools as err
 
@@ -15,16 +16,16 @@ class Orientation(Enum):
     """
     Enumération des orientation possible d'un mot (en ligne:horizontal ou en colonne:vertical)
 
-    """    
+    """
     HORIZONTAL = 0
     VERTICAL = 1
-    
+
     def __str__(self):
         return str(self.name)
 
 
 class GrilleMots:
-    
+
     def __init__(self,grille, nbLignes, nbCols):
         self.height = nbLignes
         self.width = nbCols
@@ -41,7 +42,7 @@ class GrilleMots:
         self.recupGrid(grille)
         self.constructGrille()
 
-        
+
     def recupGrid(self, grille):
         # si c'est une liste de string
         if tools.isList(grille):
@@ -66,7 +67,7 @@ class GrilleMots:
             self.grille = grille
         else:
             raise err.FinProgException("La grille a mal ete lue")
-        
+
     def constructGrille(self):
         grille = self.grille
         nouvMot = True
@@ -149,7 +150,7 @@ class GrilleMots:
         self.enregistreNouvMot(iMot,jMot,numMot,tailleMot,Orientation.VERTICAL)
         ## on recupere les contraintes de croisement de toutes les variables
         self.buildConstraints()
-        
+
     """
     Enregistre le mot numMot de taille tailleMot et ajoute la contrainte correspondante
     """
@@ -166,7 +167,7 @@ class GrilleMots:
             self.vertic_var.update({numMot:var})
         # on incremente le nombre de mots
         self.nbMots += 1
-        
+
     def buildConstraints(self):
         # pour chaque variable on sauvegarde les contraintes qui lui sont liées
         # les variables horizontales ne croisant que les variables verticales et inversement
@@ -188,8 +189,8 @@ class GrilleMots:
                 # end if
             # end for
         # end for
-        #end        
-    
+        #end
+
     """
     Vérifie que ce mot est imaginable pour le mot numMot
     """
@@ -208,21 +209,25 @@ class GrilleMots:
             return True
         else:
             return False
-        
+
     def __str__(self):
         print self.str_grille
         string = "Grille {}*{} avec {} mots\n".format(self.height,self.width,self.nbMots)
-        
+
         # pour chaque variable on affiche ses caracteristiques
         for num,val in self.variables.iteritems():
             string+= "\tMot {} commençant en {}, avec {} lettres et en direction {}\n".format(num,val[0],val[1],val[2])
         return str(string)
-    
+
     def str_writeEntryFile(self):
         string = "\n{} {}\n".format(self.height,self.width)
         string+=self.str_grille
         return string
-        
+
+    def fillGrid(self, instance):
+        for numVar, str_mot in instance.items():
+            self.setVarValue(numVar,str_mot)
+
     ##################### GENERATION ALEATOIRE D'UNE GRILLE #################
     @staticmethod
     def genere_grid(lignes,colonnes,nbCasesNoires) :
@@ -235,7 +240,7 @@ class GrilleMots:
         # on place les cases noires
         if nbCasesNoires>=lignes*colonnes :
             print("ERREUR : {} cases noires ≥ {} (taille de la grille)".format(nbCasesNoires,lignes*colonnes))
-            return None           
+            return None
         for i in range(nbCasesNoires) :
             # tant qu'aucun x, y n'est valide
             while True :
@@ -248,7 +253,7 @@ class GrilleMots:
                     break;
         grille_mots = GrilleMots(grille,lignes,colonnes)
         return grille_mots
-        
+
 class Solver:
 
     def __init__(self, grid, dictionnaire):
@@ -260,13 +265,35 @@ class Solver:
                 self.dictionnaire.get(self.contraintes.tailleFixeVars[X], set())
                 ) for X in self.variables}
 
+    def getCommuneVars(self, numVar):
+        return self.contraintes.valeurCommuneVars[numVar]
+
+    def isConsistent(self, numVar, v):
+        """
+        Checks that the assignment is consistent for this CSP.
+        @return True if it is, False if there are conflicts.
+        """
+        communeVars = self.getCommuneVars(numVar)
+        for indX, communeVar, indY in communeVars:
+            dY = self.domain[communeVar]
+            if not any(self.areLetterIntersect(v, motY, indX, indY) for motY in dY):
+                return False
+        return True
+
+    def isComplete(self, instance):
+        for numVar, _ in self.variables.items():
+            if numVar not in instance.keys():
+                return False
+        return True
+
+    def areLetterIntersect(self, motX, motY, indH, indV):
+        return motX[indH] == motY[indV]
+
     def ac3(self):
         """
         Check arc-consistency in CSP data structure
         @return 1-boolean
         """
-        def areLetterIntersect(motX, motY, indH, indV):
-            return motX[indH] == motY[indV]
 
         def revised(dX, dY, indX, indY):
             """
@@ -277,7 +304,7 @@ class Solver:
             revised = False
             for motX in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
-                if not any(areLetterIntersect(motX, motY, indX, indY) for motY in dY):
+                if not any(self.areLetterIntersect(motX, motY, indX, indY) for motY in dY):
                     revised = True
                     dX.remove(motX)
             return revised
@@ -302,23 +329,75 @@ class Solver:
                     queue.append(numVar)
             return True
 
-    def forwardChecking(self, variables, curr_instance):
+    def mrv(self, instance):
+        """
+        Minimum-remaining-value (MRV) heuristic
+        @return the variable from amongst those that have the fewest legal values
+        """
+        unassigned_x = {}
+        verbose=[]
+        for numVar, d in self.domain.items():
+            if len(d) > 1:
+                unassigned_x[numVar] = len(d)
+            else:
+                if not numVar in instance:
+                    verbose.append(numVar)
+        for x in sorted(unassigned_x, key=unassigned_x.get):
+            if x not in instance:
+                return x
+        print "Aucun résultat:", verbose, instance
+        return False
+
+    def forwardCheck(self, instance, numVar, v):
         """
         Inference finding in the neighbor variables
         @return dict of inferences
         """
-        #TODO
+        inferences = {}
+        communeVars = self.getCommuneVars(numVar)
+        for _, communeVar, _ in communeVars:
+            s = self.domain[communeVar]
+            if len(s) > 1 and v in s:
+                s = s - set([v])
+                self.domain[communeVar] = s
+                if len(s) == 1 and communeVar not in instance:
+                    inferences[communeVar] = list(s)[0]
+            inf_list = inferences.values()
+            for inf in inf_list:
+                if inf_list.count(inf) > 1:
+                    return False
+        return inferences
 
-    def backtrack(instance,csp):
+    def backtrack(self, instance):
         """
         Search for solution and add to assignment
         @return assignment or False
         """
-        #TODO
+        if self.isComplete(instance):
+            return instance
+
+        numVar = self.mrv(instance)
+        grid_orig = deepcopy(self.grid)
+        for v in self.domain[numVar]:
+            inferences = {}
+            if self.isConsistent(numVar, v):
+                instance[numVar] = v
+                inferences = self.forwardCheck(instance, numVar, v)
+                if isinstance(inferences, dict):
+                    instance.update(inferences)
+                    result = self.backtrack(instance)
+                    if isinstance(result, dict):
+                        return result
+            del instance[numVar]
+            if isinstance(inferences,dict):
+                for i in inferences:
+                    del instance[i]
+            self.grid = deepcopy(grid_orig)
+        return False
 
 
 class Contraintes:
-    
+
     def __init__(self, nbLignes,nbColonnes):
         # un dictionnaire de set {numX: {(indX,numVarY,indY), (indX,numVarZ,indZ)}}
         self.valeurCommuneVars = dict()
@@ -327,18 +406,18 @@ class Contraintes:
         # dico car accès en O(1)
         self.tailleFixeVars = dict()
         #self.matrixConst = ContrainteMatrix(nbLignes,nbColonnes)
-    
+
     def areConstraintsVerified(self,num_var,str_mot,variables):
         if not self.tailleFixeVars.has_key(num_var):
             raise err.UnknownVarNbException(num_var)
         return self.isLengthVerified(num_var,len(str_mot)) and self.allDiffVars(num_var,str_mot,variables) and self.areLettersVerified(num_var,str_mot,variables)
-    
+
     def isLengthVerified(self,num_var,length):
         if self.tailleFixeVars[num_var]==length:
             return True
         else:
             raise err.WrongLengthException(num_var,length)
-        
+
     def areLettersVerified(self,num_var,str_mot,variables):
         # s'il n'y a aucune contrainte d'intersection avec ce mot c'est ok
         if not self.valeurCommuneVars.has_key(num_var):
@@ -359,10 +438,10 @@ class Contraintes:
                 # end if
             # end for
         return True
-        
+
     def addLengthConstraint(self,num_var,length):
         self.tailleFixeVars[num_var] = length
-    
+
     def addCommonIndexConstraint(self,num_varX, indX, num_varY,indY):
         # si la case de dictionnaire existe deja
         if self.valeurCommuneVars.has_key(num_varX):
@@ -371,13 +450,13 @@ class Contraintes:
         else: # sinon on la cree
             setX = set()
         # on ajoute l'intersection
-        setX.add((indX,num_varY,indY))          
+        setX.add((indX,num_varY,indY))
         # on update le dictionnaire de contraintes
         self.valeurCommuneVars.update({num_varX:setX})
-        
+
     def allDiffVars(self,num_var,str_mot,variables):
         print str_mot
-        for num,var in variables:
+        for num,var in variables.items():
             if num==num_var:
                 continue
             #sinon
@@ -385,7 +464,7 @@ class Contraintes:
             if var[3]==str_mot:
                 raise err.SimilarWordException(num_var,num,str_mot)
         return True
-        
+
     def __str__(self):
         string = "Contraintes de la grille:\n"
         # on affiche les contraintes joliment et dans l'ordre croissant
