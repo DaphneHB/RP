@@ -18,20 +18,20 @@ dic.recupDictionnaire()
 # solver = cl.Solver(grid, dic.DICTIONNAIRE)
 # print solver.ac3()
 
-grid = io.read_file("grille4.txt")[0]
+grid = io.read_file("grille1.txt")[0]
 print grid
 solver = cl.Solver(grid, dic.DICTIONNAIRE)
 solver.ac3()
 
-start = time.time()
-instance = solver.conflictBackJumping(deepcopy(solver.variables), {})
-print time.time() - start
+# start = time.time()
+# instance = solver.conflictBackJumping(deepcopy(solver.variables), {})
+# print time.time() - start
 
-print instance
-grid.fillGrid(instance)
+# print instance
+# grid.fillGrid(instance)
 
 start = time.time()
-instance = solver.forwardChecking(deepcopy(solver.variables), {})
+instance = solver.forwardChecking(first=True)
 print time.time() - start
 
 print instance

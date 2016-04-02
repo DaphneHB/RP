@@ -215,8 +215,8 @@ class GrilleMots:
         string = "Grille {}*{} avec {} mots\n".format(self.height,self.width,self.nbMots)
 
         # pour chaque variable on affiche ses caracteristiques
-        for num,val in self.variables.iteritems():
-            string+= "\tMot {} commençant en {}, avec {} lettres et en direction {}\n".format(num,val[0],val[1],val[2])
+        #for num,val in self.variables.iteritems():
+        #    string+= "\tMot {} commençant en {}, avec {} lettres et en direction {}\n".format(num,val[0],val[1],val[2])
         return str(string)
 
     def str_writeEntryFile(self):
@@ -337,14 +337,15 @@ class Contraintes:
 
 class Solver:
 
-    def __init__(self, grid, dictionnaire):
-        self.grid = grid
-        self.dictionnaire = dictionnaire
-        self.variables = grid.variables
-        self.contraintes = grid.contraintes
+    def __init__(self, grid, dictionnaire, **kwargs):
+        self.grid = deepcopy(grid)
+        self.dictionnaire = deepcopy(dictionnaire)
+        self.variables = self.grid.variables
+        self.contraintes = self.grid.contraintes
         self.domain = {X: deepcopy(list(
                 self.dictionnaire.get(self.contraintes.tailleFixeVars[X], list()))
                 ) for X in self.variables}
+        self.random = kwargs.get('random', False)
 
     def isComplete(self, instance):
         """
@@ -442,7 +443,7 @@ class Solver:
         for x in sorted(unassigned_x, key=unassigned_x.get):
             if x not in instance:
                 return x
-        return False
+        assert False, "No variable found"
 
     def checkForward(self, numVark, v, variables):
         """
@@ -458,18 +459,23 @@ class Solver:
                 return False
         return True
 
-    def forwardChecking(self, variables, instance):
+    def forwardChecking(self, variables={}, instance={}, **kwargs):
         """
         Search for solution and add to assignment
         @return assignment or False
         """
+        if kwargs.get('first', False):
+            instance = {} #iPython debug
+            variables = deepcopy(self.variables)
+
         if not variables:
             assert self.isComplete(instance)
             return instance
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
-        random.shuffle(self.domain[numVar]) # shuffle dictionnary
+        if self.random:
+            random.shuffle(self.domain[numVar]) # shuffle dictionnary
         var_orig = deepcopy(variables)
         dom_orig = deepcopy(self.domain)
         for v in self.domain[numVar]:
