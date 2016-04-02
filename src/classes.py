@@ -254,6 +254,87 @@ class GrilleMots:
         grille_mots = GrilleMots(grille,lignes,colonnes)
         return grille_mots
 
+class Contraintes:
+
+    def __init__(self, nbLignes,nbColonnes):
+        # un dictionnaire de dict {numX: {numVarY : (indX,indY), numVarZ : (indX,indZ)}}
+        self.valeurCommuneVars = dict()
+        # pour les contraintes de tailles
+        # a chaque indices -> un int correspondant a la taille max de la var au num de l'ind
+        # dico car accès en O(1)
+        self.tailleFixeVars = dict()
+        #self.matrixConst = ContrainteMatrix(nbLignes,nbColonnes)
+
+    def areConstraintsVerified(self,num_var,str_mot,variables):
+        if not self.tailleFixeVars.has_key(num_var):
+            raise err.UnknownVarNbException(num_var)
+        return self.isLengthVerified(num_var,len(str_mot)) and self.allDiffVars(num_var,str_mot,variables) and self.areLettersVerified(num_var,str_mot,variables)
+
+    def isLengthVerified(self,num_var,length):
+        if self.tailleFixeVars[num_var]==length:
+            return True
+        else:
+            raise err.WrongLengthException(num_var,length)
+
+    def areLettersVerified(self,num_var,str_mot,variables):
+        # s'il n'y a aucune contrainte d'intersection avec ce mot c'est ok
+        if not self.valeurCommuneVars.has_key(num_var):
+            return True
+        else:
+            # sinon pour chaque contrainte d'intersection liee à ce mot
+            # on verifie si pour l'autre variable, un mot a déja été placé
+            # et donc si la contrainte d'egalite convient
+            for numY, indXY in self.valeurCommuneVars[num_var].items():
+                varY = variables[numY]
+                motY = varY[3]
+                # on verifie que la val[indX]-ème lettre ==val[indY]-ème lettre
+                indX = indXY[0]
+                indY = indXY[1]
+                if not motY is None and str_mot[indX]!=motY[indY]:
+                    raise err.DifferentLetterException(num_var,indX,numY,indY)
+                # end if
+            # end for
+        return True
+
+    def addLengthConstraint(self,num_var,length):
+        self.tailleFixeVars[num_var] = length
+
+    def addCommonIndexConstraint(self,num_varX, indX, num_varY,indY):
+        # si la case de dictionnaire existe deja
+        if self.valeurCommuneVars.has_key(num_varX):
+            # on la recupere
+            dictX = self.valeurCommuneVars[num_varX]
+        else: # sinon on la cree
+            dictX = dict()
+        # on ajoute l'intersection
+        dictX[num_varY] = (indX, indY)
+        # on update le dictionnaire de contraintes
+        self.valeurCommuneVars.update({num_varX:dictX})
+
+    def allDiffVars(self,num_var,str_mot,variables):
+        #print str_mot
+        for num,var in variables.items():
+            if num==num_var:
+                continue
+            #sinon
+            #print var[3]
+            if var[3]==str_mot:
+                raise err.SimilarWordException(num_var,num,str_mot)
+        return True
+
+    def __str__(self):
+        string = "Contraintes de la grille:\n"
+        # on affiche les contraintes joliment et dans l'ordre croissant
+        for num in sorted(self.tailleFixeVars.keys()):
+            string +="\tVariable {} de taille {} ".format(num,self.tailleFixeVars[num])
+            # si cette variable est en contrainte avec d'autres
+            if self.valeurCommuneVars.has_key(num):
+                string+="telle que "
+                for numX, indXY in self.valeurCommuneVars[num]:
+                    string+="X{}[{}]==X{}[{}]   ".format(num,indXY[0],numX,indXY[1])
+            string+="\n"
+        return string
+
 class Solver:
 
     def __init__(self, grid, dictionnaire):
@@ -388,7 +469,7 @@ class Solver:
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
-        #random.shuffle(self.domain[numVar])
+        random.shuffle(self.domain[numVar]) # shuffle dictionnary
         var_orig = deepcopy(variables)
         dom_orig = deepcopy(self.domain)
         for v in self.domain[numVar]:
@@ -402,92 +483,51 @@ class Solver:
             self.domain = deepcopy(dom_orig)
         return False
 
+    def isConsistent2(self, numVar, v, instance):
+        conflict_var1 = set()
+        conflict_var2 = set()
+        neighbors = self.getCommuneVars(numVar)
+        for var, indXY in neighbors.items():
+            try:
+                vv = instance[var]
+                indX, indY = indXY
+                if not self.areLetterIntersect(v, vv, indX, indY):
+                    conflict_var1.add(var)
+                elif not self.areDifferentWords(v, vv):
+                    conflict_var2.add(var)
+            except KeyError:
+                pass
+        return conflict_var1 | conflict_var2
+
+
     def conflictBackJumping(self, variables, instance):
         """
         CBJ fait appel à la fonction consistante qui recoit une
         instanciation et retourne l'ens des variables de la contrainte
         violée si i est inconsistante.
-        @return assignment or False
         """
-
-
-class Contraintes:
-
-    def __init__(self, nbLignes,nbColonnes):
-        # un dictionnaire de dict {numX: {numVarY : (indX,indY), numVarZ : (indX,indZ)}}
-        self.valeurCommuneVars = dict()
-        # pour les contraintes de tailles
-        # a chaque indices -> un int correspondant a la taille max de la var au num de l'ind
-        # dico car accès en O(1)
-        self.tailleFixeVars = dict()
-        #self.matrixConst = ContrainteMatrix(nbLignes,nbColonnes)
-
-    def areConstraintsVerified(self,num_var,str_mot,variables):
-        if not self.tailleFixeVars.has_key(num_var):
-            raise err.UnknownVarNbException(num_var)
-        return self.isLengthVerified(num_var,len(str_mot)) and self.allDiffVars(num_var,str_mot,variables) and self.areLettersVerified(num_var,str_mot,variables)
-
-    def isLengthVerified(self,num_var,length):
-        if self.tailleFixeVars[num_var]==length:
-            return True
-        else:
-            raise err.WrongLengthException(num_var,length)
-
-    def areLettersVerified(self,num_var,str_mot,variables):
-        # s'il n'y a aucune contrainte d'intersection avec ce mot c'est ok
-        if not self.valeurCommuneVars.has_key(num_var):
-            return True
-        else:
-            # sinon pour chaque contrainte d'intersection liee à ce mot
-            # on verifie si pour l'autre variable, un mot a déja été placé
-            # et donc si la contrainte d'egalite convient
-            for numY, indXY in self.valeurCommuneVars[num_var].items():
-                varY = variables[numY]
-                motY = varY[3]
-                # on verifie que la val[indX]-ème lettre ==val[indY]-ème lettre
-                indX = indXY[0]
-                indY = indXY[1]
-                if not motY is None and str_mot[indX]!=motY[indY]:
-                    raise err.DifferentLetterException(num_var,indX,numY,indY)
-                # end if
-            # end for
-        return True
-
-    def addLengthConstraint(self,num_var,length):
-        self.tailleFixeVars[num_var] = length
-
-    def addCommonIndexConstraint(self,num_varX, indX, num_varY,indY):
-        # si la case de dictionnaire existe deja
-        if self.valeurCommuneVars.has_key(num_varX):
-            # on la recupere
-            dictX = self.valeurCommuneVars[num_varX]
-        else: # sinon on la cree
-            dictX = dict()
-        # on ajoute l'intersection
-        dictX[num_varY] = (indX, indY)
-        # on update le dictionnaire de contraintes
-        self.valeurCommuneVars.update({num_varX:dictX})
-
-    def allDiffVars(self,num_var,str_mot,variables):
-        #print str_mot
-        for num,var in variables.items():
-            if num==num_var:
-                continue
-            #sinon
-            #print var[3]
-            if var[3]==str_mot:
-                raise err.SimilarWordException(num_var,num,str_mot)
-        return True
-
-    def __str__(self):
-        string = "Contraintes de la grille:\n"
-        # on affiche les contraintes joliment et dans l'ordre croissant
-        for num in sorted(self.tailleFixeVars.keys()):
-            string +="\tVariable {} de taille {} ".format(num,self.tailleFixeVars[num])
-            # si cette variable est en contrainte avec d'autres
-            if self.valeurCommuneVars.has_key(num):
-                string+="telle que "
-                for numX, indXY in self.valeurCommuneVars[num]:
-                    string+="X{}[{}]==X{}[{}]   ".format(num,indXY[0],numX,indXY[1])
-            string+="\n"
-        return string
+        if not variables:
+            assert self.isComplete(instance)
+            return variables
+        numVar = self.mrv(instance)
+        #random.shuffle(self.domain[numVar]) # shuffle dictionnary
+        conflict = set()
+        nonBJ = True
+        for v in self.domain[numVar]:
+            if not nonBJ: break
+            local_conflict = self.isConsistent2(numVar, v, instance)
+            if not local_conflict:
+                _variables = deepcopy(variables)
+                _variables.pop(numVar, None)
+                _instance = deepcopy(instance)
+                _instance[numVar] = v
+                child_conflict = self.conflictBackJumping(_variables, _instance)
+                if v in _instance:
+                    conflict.update(child_conflict)
+                else:
+                    conflict = child_conflict
+                    nonBJ = False
+            else:
+                conflict.update(local_conflict)
+        print conflict
+        return conflict

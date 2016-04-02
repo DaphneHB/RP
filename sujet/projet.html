@@ -1,0 +1,83 @@
+<!-- genere par le script web -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">
+<html><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+   <meta name="Authors" content="Patrice Perny">
+</head>
+
+<body>
+
+<h1>Projet de résolution de problème (année 2016)</h1>
+
+<h2>Génération de mots-croisés</h2>
+
+<h3>Introduction</h3>
+
+L'objet de ce projet est de développer et tester des méthodes de satisfaction de contraintes 
+pour la génération de mots croisés. Etant donné une grille vide (incluant quelques cases noires) 
+et un dictionnaire de mots admissibles (francais ou anglais), il s'agit de compléter la grille de manière 
+à ce que tous les mots formés horizontalement ou verticalement dans la grille 
+appartiennent au dictionnaire (on ne s'intéresse pas ici à la génération des définitions). 
+Les tâches à accomplir et les délivrables à rendre sont détaillés dans ce document :  <a href="http://www-poleia.lip6.fr/%7Eperny/ANDROIDE1516/RP/projet/projetRP16.pdf">sujet (pdf)</a>.
+
+
+<h3>Dictionnaires et expérimentations</h3>
+
+Dans un premier temps, pour mettre au point les algorithmes, il est conseillé de travailler
+sur des petites instances dont on sait qu'elles admettent une solution. Pour fabriquer de telles
+instances, une methode simple est la suivante :
+
+<ol>
+
+<li> Choisir une grille déjà résolue, vous en trouverez par exemple <a href="http://www.printactivities.com/Crosswords/9x9CrosswordPuzzles.html">ici</a> (en anglais). 
+
+</li><li> Constituer le dictionnaire des mots de votre grille (ecrits en majuscule)</li>
+
+
+<li> Augmenter votre dictionnaire en faisant l'union avec un mini-dictionnaire en anglais. Nous
+vous proposons pour cela le dictionnaire <a href="http://www-poleia.lip6.fr/%7Eperny/ANDROIDE1516/RP/projet/850-mots-us.txt">850-mots-us</a>. </li>
+
+<li>  Vider la grille de ses mots, conserver les cases noires et tester votre algorithme a partir du
+dictionnaire ainsi fabriqué. Dans un second temps utiliser d'autres grilles non résolues et les dictionnaires <a href="http://www-poleia.lip6.fr/%7Eperny/ANDROIDE1516/RP/projet/22600-mots-fr.txt">22600-mots-fr</a> et <a href="http://www-poleia.lip6.fr/%7Eperny/ANDROIDE1516/RP/projet/58000-mots-us.txt">58000-mots-us</a> puis,
+si votre algorithme est suffisamment performant, les dictionnaires <a href="http://www-poleia.lip6.fr/%7Eperny/ANDROIDE1516/RP/projet/133000-mots-us.txt">133000-mots-us</a> et <a href="http://www-poleia.lip6.fr/%7Eperny/ANDROIDE1516/RP/projet/135000-mots-fr.txt">135000-mots-fr</a>. 
+Vous pouvez utiliser aussi tout autre dictionnaire qui vous paraîtrait adapté (par exemple un dictionnaire des mots
+de l'informatique).</li>
+
+</ol>
+
+
+<h3>Organisation et dates</h3>
+
+<ul>
+
+<li> le langage d'implémentation recommandé est python, toutefois, si ce
+ langage ne vous convient pas d'autres options sont éventuellement 
+admissibles (Java ou C++). </li>
+
+<li> les projets doivent s'effectuer en binôme (étudiants du même groupe
+ pour faciliter les soutenances). Informez votre chargé de TD des 
+binomes constitués dès que possible (Groupe du Jeudi : 
+morgan.chopin@gmail.com ; groupe du vendredi : nawal.benabbou@lip6.fr). 
+En cas de difficulté à constituer un binôme, une dérogation pourra être 
+accordée à titre exceptionnel après demande motivée (par mail) auprès du
+ chargé de TD avec cc au responsable du projet (patrice.perny@lip6.fr).</li>
+
+<li> le projet doit être rendu au plus tard le <b> 4 avril 2016</b>. 
+Votre livraison sera constituée d'une archive zip qui comportera 
+les sources du programme et un rapport au format pdf (de préférence 
+rédigé en LaTeX). 
+Le plan du rapport suivra le plan du sujet et résumera les choix 
+méthodologiques, les principales réalisations et les tests numériques. 
+L'archive zip devra être adressée à votre chargé de TD avec copie à 
+Patrice Perny dans un mail ayant pour sujet "projet RP 2016 : nom1, 
+nom2".</li>
+
+<li> la soutenance du projet est prévue en salle TME à l'heure du TD les
+ 7 et 8 avril 2016. Prévoyez de pouvoir faire une démonstration sur 
+machine de vos programmes. </li>
+
+</ul>
+
+
+
+</body></html>

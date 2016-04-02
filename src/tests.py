@@ -24,8 +24,15 @@ solver = cl.Solver(grid, dic.DICTIONNAIRE)
 solver.ac3()
 
 start = time.time()
+instance = solver.conflictBackJumping(deepcopy(solver.variables), {})
+print time.time() - start
+
+print instance
+grid.fillGrid(instance)
+
+start = time.time()
 instance = solver.forwardChecking(deepcopy(solver.variables), {})
-print time.time() - start # 13.18 to 13.73, 4.00 to 4.57
+print time.time() - start
 
 print instance
 grid.fillGrid(instance)
