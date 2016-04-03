@@ -27,6 +27,78 @@ COULEUR_PATH = "background-color: blue"
 COULEUR_NOIRE = "background-color: black"
 COULEUR_DEF = "background-color: white"
 
+class TaskThread(QtCore.QThread):
+    taskFinished = QtCore.pyqtSignal()
+    def __init__(self,solv,ac3=False,fc=True,cbj=False):
+        QtCore.QThread.__init__(self)
+        self.solv=solv
+        self.ac3 = ac3
+        self.fc = fc
+        self.cbj = cbj
+    
+    def run(self):
+        self.solv.run(ac3=self.ac3,fc=self.fc,cbj=self.cbj)
+
+        self.taskFinished.emit()  
+
+
+class ChoixSolverDialog(QtGui.QDialog):
+    def __init__(self,parent=None):
+        super(ChoixSolverDialog, self).__init__(parent=parent)
+        self.initUI()
+        
+    def initUI(self):
+        self.setWindowTitle("Dialog")
+        vbox = QtGui.QVBoxLayout()
+        # choix avec ou sans ac3
+        self.groupAc3 = QtGui.QGroupBox("AC3",self)
+        self.ravecAc3 = QtGui.QCheckBox('Avec AC3', self)
+        self.ravecAc3.setChecked(False)
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addStretch(1)
+        hbox1.addWidget(self.ravecAc3)
+        hbox1.addStretch(1)
+        self.groupAc3.setLayout(hbox1)
+        
+        # choix de l'algo:
+        self.groupAlgo = QtGui.QGroupBox("Algorithme",self)
+        self.rfc = QtGui.QRadioButton("Forward Checking")
+        self.rcbj = QtGui.QRadioButton("Conflict Back Jumping")
+        self.rfc.setChecked(True)
+        vbox2 = QtGui.QVBoxLayout()
+        vbox2.addStretch(1)
+        vbox2.addWidget(self.rfc)
+        vbox2.addWidget(self.rcbj)
+        vbox2.addStretch(1)
+        self.groupAlgo.setLayout(vbox2)
+        
+        # valid button
+        self.valid = QtGui.QPushButton("Valider")
+        self.valid.connect(self.valid, QtCore.SIGNAL('clicked()'), self.choixSolver)
+        self.cancel = QtGui.QPushButton("Annuler")
+        self.cancel.connect(self.cancel, QtCore.SIGNAL('clicked()'), self.close)
+        hbox3 = QtGui.QHBoxLayout()
+        hbox3.addStretch(1)
+        hbox3.addWidget(self.valid)
+        hbox3.addWidget(self.cancel)
+        hbox3.addStretch(1)
+        vbox.addStretch(1)
+        vbox.addWidget(self.groupAc3)
+        vbox.addWidget(self.groupAlgo)
+        vbox.addLayout(hbox3)
+        vbox.addStretch(1)
+        self.setLayout(vbox)
+        return None
+        
+    def choixSolver(self):
+        if self.sender()==self.valid:
+            self.with_ac3 = self.ravecAc3.isChecked()
+            self.with_cbj = self.rcbj.isChecked()
+            self.with_fc = self.rfc.isChecked()
+            self.close()
+            self.parent().genereResolution(self)
+            
+   
 class CaractGrille(QtGui.QWidget):
     """
     Widget/Panel pour choisir M,N et le nom du fichier avant de determiner les obstacles
@@ -163,18 +235,16 @@ class BoutonGrille(QtGui.QPushButton):
         
 class GridObject(QtGui.QWidget):
     MARGE = 100
-    def __init__(self, lign, cols, nbNoires, wordGrid,papa=None, parent=None):
+    def __init__(self, wordGrid,papa=None, parent=None):
         super(GridObject, self).__init__(parent=parent)
         # objet GrilleMots
         self.wordGrid = wordGrid
         # nb de lignes de la grille
-        self.lignes = lign
+        self.lignes = wordGrid.height
         # nb de colonnes de la grille
-        self.colonnes = cols
-        # nombre de cases noires à générer aléatoirement
-        self.nbCasesNoires = nbNoires
+        self.colonnes = wordGrid.width
         # grille de 0 et de 1 sauvegardée dans le fichier
-        self.grille = None
+        self.grille = wordGrid.grille
         # on recupere l'objet choixgrille parent
         self.papaWidg = papa
         
@@ -233,11 +303,46 @@ class GridObject(QtGui.QWidget):
             grid.setRowMinimumHeight(i,BoutonGrille.SIZE)
         # end 2e for
         grid.setSpacing(0.5)
+        self.buttons = butt
         self.gridLay = grid
      
     def clicked(self):
         self.papaWidg.clicked(self.sender())
+    
+    def afficheResolution(self):
+        """
+        Affiche sur l'interfaceChoixGrille actuelle le chemin en colorant les case en bleu
+        """
+            
+        if not self.wordGrid.solution:
+            return False
+        # sinon on recupere les variables generees par la solution
+        solutions = self.wordGrid.variables
+        for num,((iv,jv),taille,orient,val) in solutions.items():
+            # si la variable est verticale on arrete
+            if orient==io.Orientation.VERTICAL:
+                break
+            # on ecrit lettre par lettre la valeur en string de la variable
+            for ind in range(taille):
+                # TODO : cas inimaginable?!
+                if val is None:
+                    return False
+                self.buttons[iv][jv+ind].setText(val[ind])
+                # end if
+            # end for
+        # end for
+        return True
          
+    def effaceResolution(self):
+        print self.buttons
+        # on remet les cases blanches en blanc (ie sans lettre dessus)
+        for butt in self.buttons:
+            # si ce n'est pas une case noire
+            if not butt.isBlack:
+                # on le met a blanc
+                butt.setText("")
+        
+        
 class ChoixGrille(QtGui.QWidget):
     
     def __init__(self, lign, cols, nbNoires, wordGrid = None, parent=None):
@@ -265,6 +370,7 @@ class ChoixGrille(QtGui.QWidget):
         self.gridz = None
         # on resize le parent pour recuperer les bonnes tailles
         self.resizeParent()
+        self.modifiee = False
         self.initUI()
         
     def initUI(self):
@@ -284,8 +390,6 @@ class ChoixGrille(QtGui.QWidget):
         dicsLay.addWidget(self.listDicsWidg)
         for f in self.parent().listDics:
             item = QtGui.QListWidgetItem(f)
-            #item.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-            #item.addAction(self.remAction)
             self.listDicsWidg.addItem(item)
         
         right = QtGui.QFrame(self)
@@ -333,9 +437,13 @@ class ChoixGrille(QtGui.QWidget):
             self.wordGrid = self.wordGrid[0]
             self.numGrid = 0
             self.nbGridz = len(self.gridz)
+            # on recupere la grille correspondante:
+            self.grille = self.wordGrid.grille.copy()
+            self.lignes = self.wordGrid.height
+            self.colonnes = self.wordGrid.width
 
         # dans les deux cas on affiche la grille
-        self.gridWidget = GridObject(self.lignes,self.colonnes,self.nbCasesNoires,self.wordGrid,papa=self,parent=self)
+        self.gridWidget = GridObject(self.wordGrid,papa=self,parent=self)
         
         # on liste toutes les grilles du fichier ouvert ou creees
         combo = QtGui.QComboBox(self)
@@ -364,7 +472,7 @@ class ChoixGrille(QtGui.QWidget):
         # on genere une grille de mots aleatoirement
         self.wordGrid = io.GrilleMots.genere_grid(self.lignes,self.colonnes,self.nbCasesNoires)
         # on recupere la grille
-        self.grille = self.wordGrid.grille
+        self.grille = self.wordGrid.grille.copy()
         
         # une seule grille => pas d'option multi
         self.gridz = [self.wordGrid]
@@ -412,9 +520,8 @@ class ChoixGrille(QtGui.QWidget):
         # si une solution a été générée 
         # on l'efface
         
-        if False and not self.solutionAffichee is None:
+        if self.solutionAffichee :
             self.effaceResolution()
-        #sender = self.sender()
         # on notifie au bouton d'aparaitre tel que l'etat le suggere
         # et on recupere les coordonnees de ce bouton pour changer la self.grille        
         x,y = sender.coordonnees
@@ -431,6 +538,7 @@ class ChoixGrille(QtGui.QWidget):
                 self.grille[x][y] = 0
             else:
                 self.grille[x][y] = 1
+            self.modifiee=True
             sender.stateChange(self.grille[x,y]==1)
                 
     def changeGridView(self,text):
@@ -438,9 +546,8 @@ class ChoixGrille(QtGui.QWidget):
         num = int(text[1])-1
         # si c'est le meme numero, on ne change rien
         # ou s'il y a un soucis et que la grille num n'existe pas on ne fait rien
-        if not (num==self.numGrid or num>=self.nbGridz):
+        if num!=self.numGrid and num<self.nbGridz:
             self.switchGrille(num)
-
         
     def changeEtat(self,pressed):
         sender = self.sender()
@@ -457,140 +564,111 @@ class ChoixGrille(QtGui.QWidget):
         filename = self.parent().filename
         # si aucune sauvegarde n'a été faite
         if filename is None or sous:
-            filename = str(QtGui.QFileDialog(self).getSaveFileName(self, "Sauvegarder la grille")) 
+            filename = str(QtGui.QFileDialog(self).getSaveFileName(self, "Sauvegarder les grilles")) 
         if filename=="":
+            QtGui.QMessageBox.warning(self,u'Sauvegarde annuléee',u"Aucune sauvegarde n'a pu être effectuée")
             return self.parent().filename
         self.gridz[self.numGrid] = io.GrilleMots(self.grille,self.lignes,self.colonnes)
         io.write_GrilleFile(filename,self.gridz,True)
+        QtGui.QMessageBox.information(self,u'Sauvegarde effectuée',u'Sauvegarde effectuée dans le fichier {}'.format("solution_"+filename))
         self.parent().isSavedFile = True
         return filename
         
-    def resoutProblem(self):
+    def resoutGrille(self):
         # si une solution a été générée 
         # on l'efface
-        if not self.solutionAffichee is None:
+        if self.solutionAffichee:
             self.effaceResolution()
         # on charge les dicos
         self.chargeDicos()
         # recuperation d'un nouvel objet grille car il y a peut etre eu des modif
         self.wordGrid = io.GrilleMots(self.grille,self.lignes,self.colonnes)
-        return None
-        
+        self.gridz[self.numGrid] = self.wordGrid
         # resolution de la grille
         # generation de la solution
-        # TODO : io.algos.Algorithm(prob)
-        ####### recuperation de la solution
-        filename = self.parent().filename
-        # si aucune sauvegarde n'a été faite
-        # sauvegarde de la solution dans un fichier
-        if filename is None:
-            # recuperation du nom de fichier solution
-            dialog = QtGui.QInputDialog()
-            filename, ok = dialog.getText(self, 'Fichier Sauvegarde', 
-                                                      'Nom du fichier sauvergarde')             
+        dialog = ChoixSolverDialog(parent=self)
+        dialog.show()
+        
+    def sauveResolution(self,isSolution=True):
+        ok = False
+        if not isSolution:
+            QtGui.QMessageBox.information(self,u'Aucune solution',u'Pas de solution pour cette grille avec ce dictionnaire là.')
         else:
-            reply = QtGui.QMessageBox.question(self,u"Sauvegarde",u"Voulez-vous écraser l'ancienne grille {} et sauvegarder la solution?".format(filename),QtGui.QMessageBox.Yes | 
-                QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel, QtGui.QMessageBox.No)
-            if reply == QtGui.QMessageBox.Yes:
-                ok=True
-            elif reply == QtGui.QMessageBox.Cancel:
-                QtGui.QMessageBox.information(self,u'Résolution annulée',u'La résolution du problème {} a été annulée'.format(filename))
-                return None
+            ####### recuperation de la solution
+            filename = self.parent().filename
+            # si aucune sauvegarde n'a été faite
+            # sauvegarde de la solution dans un fichier
+            if filename is None:
+                # recuperation du nom de fichier solution
+                dialog = QtGui.QInputDialog()
+                filename, ok = dialog.getText(self, 'Fichier Sauvegarde', 
+                                                          'Nom du fichier sauvergarde')             
             else:
-                ok=False
+                filename = os.path.basename(filename)
+                reply = QtGui.QMessageBox.question(self,u"Sauvegarde",u"Voulez-vous écraser l'ancienne résolution {}/solution_{} et sauvegarder la solution?".format(io.SOLUTION_PATH,filename),QtGui.QMessageBox.Yes | 
+                    QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel, QtGui.QMessageBox.No)
+                if reply == QtGui.QMessageBox.Yes:
+                    ok=True
+                elif reply == QtGui.QMessageBox.Cancel:
+                    QtGui.QMessageBox.information(self,u'Sauvegarde annulée',u'La sauvegarde de la grille a été annulée')
+                    return None
+                else:
+                    ok=False
         # on traite la reponse
-        # TODO : resoudre + write solution file
-        return None
-        if ok:
-            io.write_ProblemFile(filename,prob)
-            io.write_SolutionFile(filename,[prob])
+        if ok and isSolution:
+            io.write_GrilleFile(filename,self.gridz)
+            io.write_SolutionFile(filename,self.gridz)
             self.parent().isSavedFile = True
             self.parent().filename = filename
-        solution = prob.solutionNoeud
-        self.solutionAffichee = solution
-        self.affichResolution()
-        return solution
-        
-    def affichResolution(self):
-        """
-        Affiche sur l'interfaceChoixGrille actuelle le chemin en colorant les case en bleu
-        """
-        # TODO : resoudre
-        return None
-        
-        chemin = self.solutionAffichee
-        if chemin is None:
-            exit
         else:
-            widgGrille = self.gridLay
-            precPt = chemin[0]
-            # cas du premier point
-            # TODO border right does not work
-            Sicolor = "border-right:5px dotted red;"+COULEUR_DEF
-            Sjcolor = "border-top: 5px dotted red;"+COULEUR_DEF
-            Sicolor = Sjcolor = COULEUR_PATH
-#            widgGrille.itemAtPosition(*precPt).widget().setStyleSheet(Scolor)
-            for point in chemin :
-                if point == precPt:
-                    # on zappe le premier point
-                    continue
-                # pour chaque point ou le robot tourne
-                # on reconstruit l'itineraire entre les point
-                xprec,yprec = precPt
-                xp,yp = point
-                # cas ou on avance sur la colonne : j constant
-                if xprec!=xp:
-                    rangeX = range(xprec,xp) if xp>xprec else range(xp,xprec)
-                    for i in rangeX :
-                        widgGrille.itemAtPosition(i,yp).widget().setStyleSheet(Sicolor)
-                # cas ou on avance sur la ligne : i constant
-                elif yprec!=yp:
-                    rangeY = range(yprec,yp) if yp>yprec else range(yp,yprec)
-                    for j in rangeY :
-                        widgGrille.itemAtPosition(xp,j).widget().setStyleSheet(Sjcolor)
-                    # end for
-                # on prevoit le passage au point suivant
-                precPt = point
-            #widgGrille.itemAtPosition(*point).widget().setStyleSheet(Scolor)
-            
+            self.solutionAffichee = False
+        
+    def genereResolution(self,dialog):
+        # on recupere l'algo voulu par l'utilisateur
+        solveur = io.Solver(self.wordGrid,dic.DICTIONNAIRE,random=True)
+        # on applique l'AC3 si c'est voulu par l'utilisateur
+        ac3 = dialog.with_ac3
+        # on applique l'algo choisi par l'utilisateur
+        FC = dialog.with_fc
+        CBJ = dialog.with_cbj
+     
+        # launching resolution    
+        self.progress = QtGui.QProgressDialog("Algorithme en cours","Cancel",0,0,self) 
+        self.progress.setWindowTitle('...')
+        self.progress.setWindowModality(QtCore.Qt.WindowModal)
+        self.progress.canceled.connect(self.progress.close)
+        self.progress.show()
+        
+        self.TT = TaskThread(solveur,ac3=ac3,fc=FC,cbj=CBJ)
+        self.TT.finished.connect(self.TT_Finished)
+        self.progress.canceled.connect(self.progress.close)
+        self.progress.show()
+        self.TT.start()
+
+    def TT_Finished(self):
+        self.progress.close()
+        self.afficheResolution()
+        
+    def afficheResolution(self):
+        # le gridWidget recupere la grille et ses caracteristiques
+        widg = self.gridWidget
+        self.wordGrid.solution = self.solutionAffichee = True
+        widg.lignes = self.lignes
+        widg.colonnes = self.colonnes
+        widg.wordGrid = self.wordGrid
+        widg.nbCasesNoires = self.nbCasesNoires
+        # TODO : not working?
+        if widg.afficheResolution():
+            # on demande a sauver/ou non la resolution generee
+            self.sauveResolution()
+        else :
+            self.sauveResolution(isSolution=False)
+                     
     def effaceResolution(self):
         """
-        Retire de l'interfaceChoixGrille actuelle le chemin en colorant les case en bleu
+        Retire de l'interfaceChoixGrille actuelle le chemin en effacant toutes les lettres des cases blanches
         """
-        # TODO : resoudre
-        return None
-        chemin = self.solutionAffichee
-        if chemin is None:
-            exit
-        else:
-            widgGrille = self.gridLay
-            precPt = chemin[0]
-            # cas du premier point
-            Scolor = COULEUR_DEF
-            widgGrille.itemAtPosition(*precPt).widget().setStyleSheet(Scolor)
-            for point in chemin :
-                
-                if point == precPt:
-                    # on zappe le premier point
-                    continue
-                # pour chaque point ou le robot tourne
-                # on reconstruit l'itineraire entre les point
-                xprec,yprec = precPt
-                xp,yp = point
-                # cas ou on avance sur la ligne : i constant
-                if yprec!=yp:
-                    rangeY = range(yprec,yp) if yp>yprec else range(yp,yprec)
-                    for j in rangeY :
-                        widgGrille.itemAtPosition(xp,j).widget().setStyleSheet(Scolor)
-                    # end for
-                # cas ou on avance sur la colonne : j constant
-                elif xprec!=xp:
-                    rangeX = range(xprec,xp) if xp>xprec else range(xp,xprec)
-                    for i in rangeX :
-                        widgGrille.itemAtPosition(i,yp).widget().setStyleSheet(Scolor)
-                # on prevoit le passage au point suivant
-                precPt = point
-            widgGrille.itemAtPosition(*point).widget().setStyleSheet(Scolor)
+        self.gridWidget.effaceResolution()
     
     def affichGrille(self,grid):
         self.lignes = grid.height
@@ -626,23 +704,28 @@ class ChoixGrille(QtGui.QWidget):
         self.gridLayout = grid
      
     def switchGrille(self,nouv_num):
-        reply = QtGui.QMessageBox.question(self,u"Enregistrement",u"Voulez-vous écraser l'ancienne grille {} et enregistrer la nouvelle grille à la place?".format(self.numGrid+1),QtGui.QMessageBox.Yes | 
-            QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel, QtGui.QMessageBox.No)
-        if reply == QtGui.QMessageBox.Yes:
-            ok=True
-        elif reply == QtGui.QMessageBox.Cancel:
-           return None
-        else:
-            ok=False
-        if ok:
-            # on enregistre la grille courante si l'utilisateur le veut
-            self.gridz[self.numGrid] = io.GrilleMots(self.grille,self.lignes,self.colonnes)
+        if self.modifiee:
+            reply = QtGui.QMessageBox.question(self,u"Enregistrement",u"Voulez-vous écraser l'ancienne grille {} et enregistrer la nouvelle grille à la place?".format(self.numGrid+1),QtGui.QMessageBox.Yes | 
+                QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel, QtGui.QMessageBox.No)
+            if reply == QtGui.QMessageBox.Yes:
+                ok=True
+            elif reply == QtGui.QMessageBox.Cancel:
+               return None
+            else:
+                ok=False
+            if ok:
+                # on enregistre la grille courante si l'utilisateur le veut
+                self.gridz[self.numGrid] = io.GrilleMots(self.grille,self.lignes,self.colonnes)
         # on change le panel courant
         # on recupere le i-eme objet grille de la liste
         self.wordGrid = self.gridz[nouv_num]
         self.numGrid = nouv_num
-        nWidget = GridObject(self.lignes,self.colonnes,self.nbCasesNoires,self.wordGrid,papa=self,parent=self)
+        nWidget = GridObject(self.wordGrid,papa=self,parent=self)
+        self.grille = self.wordGrid.grille.copy()
+        self.lignes = self.wordGrid.height
+        self.colonnes = self.wordGrid.width
         self.setNewPanel(nWidget)
+        self.modifiee = False
         
     def setNewPanel(self, npanel):
         for i in reversed(range(self.gridLayout.count())):
@@ -654,10 +737,9 @@ class ChoixGrille(QtGui.QWidget):
         # on recupere le dico
         try:
             dic.recupDictionnaire(self.parent().listDics)
-        except Exception as e:
-            print e
-            QtGui.QMessageBox.critical(self,u"Fichier invalide",u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
+        except :
             dic.recupDictionnaire([dic.DICT_DEF])
+            QtGui.QMessageBox.critical(self,u"Fichier invalide",u"Le fichier choisi est le fichier par défaut {}".format(dic.DICT_FNAME))
         self.dico = dic.DICTIONNAIRE
 
         
@@ -725,7 +807,6 @@ class MaWindow(QtGui.QMainWindow):
         
         # menu changement de dictionnaire
         removeDicAction = QtGui.QAction('&Supprimer dictionnaire',self)
-        removeDicAction.setShortcut('Ctrl+Shift+R')
         removeDicAction.setStatusTip("Supprime un dictionnaire")
         removeDicAction.triggered.connect(self.removeDico)
         
@@ -792,7 +873,7 @@ class MaWindow(QtGui.QMainWindow):
         # si aucun nom sélectionné
         if fname=="":
             QtGui.QMessageBox.critical(self,u"Fichier invalide",u"Aucun fichier choisi")
-            fname = None
+            fname = dic.DICT_DEF
         return fname
     
     def addDico(self):
@@ -821,7 +902,9 @@ class MaWindow(QtGui.QMainWindow):
         # sinon
         else:
             self.filename = widg.sauvegardeInFile(True)
-            self.isSavedFile = not self.filename is None
+            self.isSavedFile = widg.isSavedFile
+            if not self.isSavedFile:
+                QtGui.QMessageBox.warning(self,"Sauvegarde impossible",u"Nom de fichier nécessaire")
             self.statusBar().showMessage(u"Sauvegarde de {} effectuée".format(self.filename))
 
     def resoudreGrille(self):
@@ -833,13 +916,13 @@ class MaWindow(QtGui.QMainWindow):
             self.statusBar().showMessage(u"Résolution de la grille en cours")
             # on recupere le chemin generé
             # si le dico est vide on en charge un
-            if self.dico == {}:
-                self.chooseDico()
-            resolu = widg.resoutProblem()
-            if resolu is None:
+            if self.listDics == []:
+                self.addDico()
+            widg.resoutGrille()
+            if not widg.solutionAffichee:
                 self.statusBar().showMessage(u"Aucune solution trouvée")            
             else:
-                self.statusBar().showMessage(u"Grille résolue : {}".format(resolu))
+                self.statusBar().showMessage(u"Grille résolue")
         
     def nouvFile(self):
         choice_widget = CaractGrille(self.statusBar(),self)
