@@ -231,61 +231,35 @@ class GrilleMots:
         return string
 
     def str_writeSolutionFile(self):
+        matrix = np.empty([self.height, self.width], dtype="S1")
+        # on initialise la matrice à # -> case noire partout
+        matrix[:] = "#"
         # fichier solution au format
         # taille grille lignes*colonnes
         # nbVars contenues dans la grille
         # grille de lettres et de # pour les cases noires
         string = "\n{} {}".format(self.height,self.width)
         string += "\n{}\n".format(self.nbMots)
-        i = j = 0
         # pour chaque variable horizontale
         # on place les lettres correspondantes
         for num,((iv,jv),taille,orient,val) in self.variables.items():
-            print "\nvar",num,"debute en (",iv,",",jv,")"
-            print "{} : {}".format(orient,taille)
             # si la variable est verticale on arrete
-            print "i,j = {},{}\n".format(i,j)
+            #print "i,j = {},{}\n".format(i,j)
             if orient==Orientation.VERTICAL:
-                string+="\n"
                 break
-            if iv!=i or jv!=j:
-                print "decales ............."
-                # la prochaine variable est plus loin on met des cases noires
-                while j!=jv or i!=iv:
-                    # si les colonnes sont décalées
-                    if j>=self.width:
-                        j=0
-                        i=i+1
-                        print "i change:",i
-                        string+="\n"
-
-                    while j!=jv:
-                        j = (j+1)%self.width
-                        string+="# "
-                        print "j change",j
-                    # end while
-                    if i!=iv:
-                        i = (i+1)%self.height
-                        print "i change:",i
-                        string+="\n"
-                # end while
-
-            else:
-                print 'OK!'
-            # sinon on ecrit lettre par lettre la valeur en string de la variable
+            # on ecrit lettre par lettre la valeur en string de la variable
             for ind in range(taille):
-                print "{},{}".format(i,j+ind)
                 # TODO : cas inimaginable?!
                 if val is None:
-                    string+="_ "
+                    matrix[iv][jv+ind]="_"
                     continue
-                string += val[ind]+" "
+                matrix[iv][jv+ind] = val[ind]
                 # end if
             # end for
-            j = j + taille
              # end if
         # end for
-        print string
+        string+="\n".join([" ".join(x) for x in matrix])
+        string+="\n"
         return string
 
     def fillGrid(self, instance):
@@ -505,8 +479,8 @@ class Solver:
             from the other variable (Remove inconsistent values)
             @return 1-boolean (True if we remove a value)
             """
-            dX = self.domain[numVar_1]
-            dY = self.domain[numVar_2]
+            dX = self.domain[numVarX]
+            dY = self.domain[numVarY]
             revised = False
             for v in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
@@ -525,7 +499,6 @@ class Solver:
                 for numVarK in valCommuneVars[numVarX]:
                     if numVarK != numVarX and numVarK != numVarY:
                         queue.add((numVarK, numVarX))
-
 
     def mrv(self, instance, forwardcheck=True):
         """
