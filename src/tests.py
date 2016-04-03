@@ -20,19 +20,25 @@ dic.recupDictionnaire()
 
 grid = io.read_file("grille1.txt")[0]
 print grid
-solver = cl.Solver(grid, dic.DICTIONNAIRE, random=False)
-solver.ac3()
-
+solver_x = cl.Solver(grid, dic.DICTIONNAIRE, random=False)
+solver_x.run(ac3=True)
+#
+# solver = cl.Solver(grid, dic.DICTIONNAIRE, random=False)
 # start = time.time()
-# instance = solver.conflictBackJumping(deepcopy(solver.variables), {})
+# solver.ac3()
 # print time.time() - start
-
+# print cl.gbl_i
+#
+# # start = time.time()
+# # instance = solver.conflictBackJumping(deepcopy(solver.variables), {})
+# # print time.time() - start
+#
+# # print instance
+# # grid.fillGrid(instance)
+# cl.gbl_i = 0
+# start = time.time()
+# instance = solver.forwardChecking(first=True)
+# print time.time() - start
+# print cl.gbl_i
 # print instance
 # grid.fillGrid(instance)
-
-start = time.time()
-instance = solver.forwardChecking(first=True)
-print time.time() - start
-
-print instance
-grid.fillGrid(instance)

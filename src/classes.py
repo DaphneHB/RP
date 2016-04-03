@@ -11,6 +11,8 @@ from enum import Enum
 from copy import deepcopy
 import tools
 import error_tools as err
+import itertools
+import time
 
 class Orientation(Enum):
     """
@@ -264,6 +266,7 @@ class Contraintes:
         # dico car accès en O(1)
         self.tailleFixeVars = dict()
         #self.matrixConst = ContrainteMatrix(nbLignes,nbColonnes)
+        self.intersectIndexes = dict()
 
     def areConstraintsVerified(self,num_var,str_mot,variables):
         if not self.tailleFixeVars.has_key(num_var):
@@ -310,6 +313,7 @@ class Contraintes:
         dictX[num_varY] = (indX, indY)
         # on update le dictionnaire de contraintes
         self.valeurCommuneVars.update({num_varX:dictX})
+        self.intersectIndexes[(num_varX, num_varY)] = (indX, indY)
 
     def allDiffVars(self,num_var,str_mot,variables):
         #print str_mot
@@ -347,6 +351,18 @@ class Solver:
                 ) for X in self.variables}
         self.random = kwargs.get('random', False)
 
+    def run(self, ac3=False, **kwargs):
+        if ac3 or kwargs.get("ac3", False):
+            start = time.time()
+            self.ac3()
+            print time.time() - start
+        start = time.time()
+        instance = self.forwardChecking(first=True)
+        print time.time() - start
+        self.grid.fillGrid(instance)
+        print instance
+        print self.grid.variables
+
     def isComplete(self, instance):
         """
         Check if assignment has complete assigned all variables.
@@ -354,7 +370,7 @@ class Solver:
         @return 1-boolean
         """
         for numVar, _ in self.variables.items():
-            if numVar not in instance.keys():
+            if numVar not in instance:
                 return False
         return True
 
@@ -386,49 +402,42 @@ class Solver:
         @param 2-int, 2-str
         @return True if it is, False if there are conflicts.
         """
-        try:
-            indX, indY = self.getCommuneVars(numVar_1)[numVar_2]
-            if not self.areLetterIntersect(v, vv, indX, indY):
-                return False
-        except KeyError:
-            pass
+
+        if self.contraintes.intersectIndexes.get((numVar_1, numVar_2), False) and not self.areLetterIntersect(v, vv, *self.contraintes.intersectIndexes[(numVar_1, numVar_2)]):
+            return False
         return self.areDifferentWords(v, vv)
 
     def ac3(self):
         """
         Check arc-consistency in CSP data structure
-        @return 1-boolean
         """
 
-        def revised(dX, dY, numVar_1, numVar_2):
+        def revised(numVar_1, numVar_2):
             """
             Update the domain of one variable by excluding the domain value
             from the other variable (Remove inconsistent values)
             @return 1-boolean (True if we remove a value)
             """
+            dX = self.domain[numVarX]
+            dY = self.domain[numVarY]
             revised = False
             for v in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
                 if not any(self.isConsistent(numVar_1, v, numVar_2, vv) for vv in dY):
                     revised = True
                     dX.remove(v)
+            assert dX, "AC3 cant made CSP consistent"
             return revised
 
-        contraintes = self.contraintes
-        queue = contraintes.valeurCommuneVars.keys()
+        valCommuneVars = deepcopy(self.contraintes.valeurCommuneVars)
+        queue = [(numVarX, numVarY) for numVarX in valCommuneVars for numVarY in valCommuneVars[numVarX]]
+        queue = set(tuple(sorted(l)) for l in queue) # Removing permutations from queue
         while queue:
-            numVarX = queue.pop(0)
-            neighbors = contraintes.valeurCommuneVars[numVarX]
-            numVarY = neighbors.keys()[0]
-            dX = self.domain[numVarX]
-            dY = self.domain[numVarY]
-            if revised(dX, dY, numVarX, numVarY):
-                if not dX:
-                    return False
-                else:
-                    contraintes.valeurCommuneVars[numVarX] = neighbors
-                    queue.append(numVarX)
-        return True
+            numVarX, numVarY = queue.pop()
+            if revised(numVarX, numVarY):
+                for numVarK in valCommuneVars[numVarX]:
+                    if numVarK != numVarX and numVarK != numVarY:
+                        queue.add((numVarK, numVarX))
 
     def mrv(self, instance):
         """
@@ -450,7 +459,7 @@ class Solver:
         Build every instantiation with non conflicts between variables
         @return dict of instantiation
         """
-        for numVarj in variables.keys():
+        for numVarj in variables:
             Dj = self.domain[numVarj]
             for vv in list(Dj):
                 if not self.isConsistent(numVark, v, numVarj, vv):
