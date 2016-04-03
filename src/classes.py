@@ -417,11 +417,13 @@ class Solver:
         print stop
         if verbose > 0: print time.time() - start
         if verbose > 0: print instance
-        self.grid.fillGrid(instance)
-        if verbose > 1: print self.grid.variables
-        self.grid.solution = True
-        print instance
-        print self.grid.variables
+        if instance:
+            self.grid.fillGrid(instance)
+            if verbose > 1: print self.grid.variables
+            self.grid.solution = True
+        else:
+            self.grid.solution = False
+
 
     def isComplete(self, instance):
         """
