@@ -429,13 +429,12 @@ class Solver:
             self.ac3()
             if verbose > 0: print time.time() - start
         start = time.time()
-        instance = self.forwardChecking(first=True)
+        self.assignment = self.forwardChecking(first=True)
         stop = time.time() - start
-        print stop
-        if verbose > 0: print time.time() - start
-        if verbose > 0: print instance
-        if instance:
-            self.grid.fillGrid(instance)
+        if verbose > 0: print stop
+        if verbose > 0: print self.assignment
+        if self.assignment:
+            self.grid.fillGrid(self.assignment)
             if verbose > 1: print self.grid.variables
             self.grid.solution = True
         else:
@@ -520,14 +519,12 @@ class Solver:
         valCommuneVars = tools.deepish_copy(self.contraintes.valeurCommuneVars)
         queue = [(numVarX, numVarY) for numVarX in valCommuneVars for numVarY in valCommuneVars[numVarX]]
         queue = set(tuple(sorted(l)) for l in queue) # Removing permutations from queue
-        print sum(len(d) for d in self.domain.values())
         while queue:
             numVarX, numVarY = queue.pop()
             if revised(numVarX, numVarY):
                 for numVarK in valCommuneVars[numVarX]:
                     if numVarK != numVarX and numVarK != numVarY:
-                        queue.add((numVarX, numVarK))
-        print sum(len(d) for d in self.domain.values())
+                        queue.add((numVarK, numVarX))
 
 
     def mrv(self, instance, forwardcheck=True):
@@ -567,7 +564,6 @@ class Solver:
         if kwargs.get('first', False):
             instance = {} #iPython debug
             variables = tools.deepish_copy(self.variables)
-            print sum(len(d) for d in self.domain.values())
 
         if not variables:
             assert self.isComplete(instance)
