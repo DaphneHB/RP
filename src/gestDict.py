@@ -11,8 +11,8 @@ from tools import ABS_PATH_PRINC,OUT_STREAM
 DICO_PATH = ABS_PATH_PRINC+"/data/Dicos/"
 # DICT_DEF = "850-mots-us.txt"
 # DICT_FNAME = "850-mots-us.txt"
-DICT_DEF = "850-mots-us.txt"
-DICT_FNAME = "850-mots-us.txt"
+DICT_DEF = "133000-mots-us.txt"
+DICT_FNAME = "133000-mots-us.txt"
 ################# LECTURE D'UN FICHIER DICTIONNAIRE ##########
 
 # le dictionnaire de mots utilisé pour lancer l'algo

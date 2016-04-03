@@ -8,7 +8,6 @@ Created on Thu Mar 17 12:55:22 2016
 import numpy as np
 import random
 from enum import Enum
-from copy import deepcopy
 import tools
 import error_tools as err
 import itertools
@@ -397,14 +396,17 @@ class Solver:
 
     def __init__(self, grid, dictionnaire, **kwargs):
         self.grid = grid
-        self.dictionnaire = deepcopy(dictionnaire)
+        self.dictionnaire = tools.deepish_copy(dictionnaire)
         self.variables = self.grid.variables
         self.contraintes = self.grid.contraintes
-        self.domain = {X: deepcopy(list(
-                self.dictionnaire.get(self.contraintes.tailleFixeVars[X], list()))
+        self.domain = {X: list(
+                self.dictionnaire.get(self.contraintes.tailleFixeVars[X], list())
                 ) for X in self.variables}
         self.random = kwargs.get('random', False)
-
+        if self.random:
+            for numVar in self.domain:
+                random.shuffle(self.domain[numVar]) # shuffle dictionnary
+                
     def run(self, ac3=False, **kwargs):
         verbose = kwargs.get("verbose", 0)
         if ac3 or kwargs.get("ac3", False):
@@ -501,7 +503,7 @@ class Solver:
             assert dX, "AC3 cant made CSP consistent"
             return revised
 
-        valCommuneVars = deepcopy(self.contraintes.valeurCommuneVars)
+        valCommuneVars = tools.deepish_copy(self.contraintes.valeurCommuneVars)
         queue = [(numVarX, numVarY) for numVarX in valCommuneVars for numVarY in valCommuneVars[numVarX]]
         queue = set(tuple(sorted(l)) for l in queue) # Removing permutations from queue
         while queue:
@@ -509,7 +511,7 @@ class Solver:
             revised(numVarX, numVarY)
 
 
-    def mrv(self, instance):
+    def mrv(self, instance, forwardcheck=True):
         """
         Minimum-remaining-value (MRV) heuristic
         @return the variable from amongst those that have the fewest legal values
@@ -545,7 +547,7 @@ class Solver:
         """
         if kwargs.get('first', False):
             instance = {} #iPython debug
-            variables = deepcopy(self.variables)
+            variables = tools.deepish_copy(self.variables)
 
         if not variables:
             assert self.isComplete(instance)
@@ -553,10 +555,8 @@ class Solver:
 
         numVar = self.mrv(instance)
         variables.pop(numVar, None)
-        if self.random:
-            random.shuffle(self.domain[numVar]) # shuffle dictionnary
-        var_orig = deepcopy(variables)
-        dom_orig = deepcopy(self.domain)
+        var_orig = tools.deepish_copy(variables)
+        dom_orig = tools.deepish_copy(self.domain)
         for v in self.domain[numVar]:
             if self.checkForward(numVar, v, variables):
                 instance[numVar] = v # Instanciation du mot
@@ -564,8 +564,8 @@ class Solver:
                 if isinstance(result, dict): # isComplete(instance) is True
                     return result
                 del instance[numVar]
-            variables = deepcopy(var_orig)
-            self.domain = deepcopy(dom_orig)
+            variables = tools.deepish_copy(var_orig)
+            self.domain = tools.deepish_copy(dom_orig)
         return False
 
     def isConsistent2(self, numVar, v, instance):
@@ -602,9 +602,9 @@ class Solver:
             if not nonBJ: break
             local_conflict = self.isConsistent2(numVar, v, instance)
             if not local_conflict:
-                _variables = deepcopy(variables)
+                _variables = tools.deepish_copy(variables)
                 _variables.pop(numVar, None)
-                _instance = deepcopy(instance)
+                _instance = tools.deepish_copy(instance)
                 _instance[numVar] = v
                 child_conflict = self.conflictBackJumping(_variables, _instance)
                 if v in _instance:
