@@ -313,7 +313,13 @@ class Contraintes:
         dictX[num_varY] = (indX, indY)
         # on update le dictionnaire de contraintes
         self.valeurCommuneVars.update({num_varX:dictX})
-        self.intersectIndexes[(num_varX, num_varY)] = (indX, indY)
+        sorted_tuple = tuple(sorted((num_varX, num_varY)))
+        if not sorted_tuple in self.intersectIndexes:
+            if num_varX < num_varY:
+                self.intersectIndexes[sorted_tuple] = (indX, indY)
+            else:
+                self.intersectIndexes[sorted_tuple] = (indY, indX)
+
 
     def allDiffVars(self,num_var,str_mot,variables):
         #print str_mot
@@ -352,16 +358,17 @@ class Solver:
         self.random = kwargs.get('random', False)
 
     def run(self, ac3=False, **kwargs):
+        verbose = kwargs.get("verbose", 0)
         if ac3 or kwargs.get("ac3", False):
             start = time.time()
             self.ac3()
-            print time.time() - start
+            if verbose > 0: print time.time() - start
         start = time.time()
         instance = self.forwardChecking(first=True)
-        print time.time() - start
+        if verbose > 0: print time.time() - start
+        if verbose > 0: print instance
         self.grid.fillGrid(instance)
-        print instance
-        print self.grid.variables
+        if verbose > 1: print self.grid.variables
 
     def isComplete(self, instance):
         """
@@ -402,9 +409,19 @@ class Solver:
         @param 2-int, 2-str
         @return True if it is, False if there are conflicts.
         """
+        # Symetry
+        if numVar_1 > numVar_2:
+            tupleVar = numVar_2, numVar_1
+            v, vv = vv, v
+        else:
+            tupleVar = numVar_1, numVar_2
 
-        if self.contraintes.intersectIndexes.get((numVar_1, numVar_2), False) and not self.areLetterIntersect(v, vv, *self.contraintes.intersectIndexes[(numVar_1, numVar_2)]):
+        # Check letter intersection constraint
+        interDict = self.contraintes.intersectIndexes
+        if tupleVar in interDict and not self.areLetterIntersect(v, vv, *interDict[tupleVar]):
             return False
+
+        # Check word uniqueness constraint
         return self.areDifferentWords(v, vv)
 
     def ac3(self):
@@ -434,10 +451,8 @@ class Solver:
         queue = set(tuple(sorted(l)) for l in queue) # Removing permutations from queue
         while queue:
             numVarX, numVarY = queue.pop()
-            if revised(numVarX, numVarY):
-                for numVarK in valCommuneVars[numVarX]:
-                    if numVarK != numVarX and numVarK != numVarY:
-                        queue.add((numVarK, numVarX))
+            revised(numVarX, numVarY)
+
 
     def mrv(self, instance):
         """
