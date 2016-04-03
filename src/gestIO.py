@@ -11,7 +11,7 @@ from tools import OUT_STREAM,ABS_PATH_PRINC
 
 
 GRID_PATH = ABS_PATH_PRINC+"/data/Grilles/"
-
+SOLUTION_PATH = ABS_PATH_PRINC+"/data/Solutions"
 
 def read_file(filename) :
     """
@@ -106,6 +106,29 @@ def write_EntryFile(filename,listeTuple, pathOk = False) :
     
     return gridz
 
+def write_XGridEntryFile(filename,nbIter,tuplet, pathOk = False) :
+    """
+    Genere autant de problemes qu'il y a de tuple dans la liste
+    et les ecrit dans un fichier filename écrasé
+    """
+    
+    if not os.path.exists(GRID_PATH) and not pathOk: 
+        os.makedirs(GRID_PATH) 
+    gridz = []
+    path = GRID_PATH+""+filename if not pathOk else filename
+    # on ecrase le precedent contenu du fichier
+    with open(path,'w') as monfile:
+        for i in range(nbIter) :
+            # on genere le probleme correspondant
+            grid = GrilleMots.genere_grid(*tuplet)
+            gridz.append(grid)
+            # on ajoute son affichage file au file en question
+            monfile.write(grid.str_writeEntryFile())
+    
+        # on declare la fin du fichier
+        monfile.write("\n0 0")
+    return gridz
+
 def write_GrilleFile(filename,gridz,pathOk=False) :
     """
     Ecrit toutes les grilles de la liste dans un fichier filename écrasé
@@ -134,3 +157,46 @@ def write_GrilleFile(filename,gridz,pathOk=False) :
     # on declare la fin du fichier
     monfile.write("\n0 0")
     monfile.close()
+
+
+################# ECRITURE DE LA SOLUTION D'UN PROBLEME DANS UN FICHIER ##########
+    
+def write_SolutionFile(filename,gridz,pathOk=False) :
+    """
+    Prend un liste de probleme en parametre
+    Genere autant de bloc solution que de problemes s'il n'y en a pas deja
+    et les ecrit dans un fichier solution_filename écrasé
+    Renvoie la liste des temps d'execution de la resolution pour chaque probleme
+    """
+    tabTps = list()
+    if not os.path.exists(SOLUTION_PATH) and not pathOk: 
+        os.makedirs(SOLUTION_PATH) 
+
+    path = SOLUTION_PATH+"/solution_"+filename if not pathOk else filename
+    # on ecrase le precedent contenu du fichier
+    monfile = None
+    try:
+        monfile = open(path,'w')
+    except:
+        try:
+            monfile = open("solution_"+filename,'w')
+        except:
+            print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
+            return None
+    if gridz is None:
+        return None
+        
+    for grid in gridz :
+        # si la solution du probleme n'a pas deja eté générée            
+        if grid.solution is None:
+            # on lance la resolution du probleme correspondant
+            # TODO : interessant? 
+            grid.recupSolution()
+        # on ajoute son affichage file au file en question
+        monfile.write(grid.str_writeSolutionFile())
+        #tabTps.append(prob.tpsSolution)
+        # fin du fichier
+        monfile.write("\n")
+    # end for
+    monfile.close()    
+    #return tabTps

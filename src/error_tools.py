@@ -81,3 +81,13 @@ class NameAlreadyDefinedException(Exception):
     
     def __str__(self):
         return repr("La variable {} a déjà une valeur {}".format(self.num_var,self.str_mot))
+
+"""
+Exception raised when non solution is found with a specific dico for a grid
+"""
+class NoSolutionFoundException(Exception):
+    def __init__(self, grid):
+        self.grille = grid.str_grille
+    
+    def __str__(self):
+        return str("Aucune solution trouvée pour la grille ci-dessous avec le dictionnaire choisi.\n{}".format(self.grille))
