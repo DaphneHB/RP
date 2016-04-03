@@ -406,7 +406,7 @@ class Solver:
         if self.random:
             for numVar in self.domain:
                 random.shuffle(self.domain[numVar]) # shuffle dictionnary
-                
+
     def run(self, ac3=False, **kwargs):
         verbose = kwargs.get("verbose", 0)
         if ac3 or kwargs.get("ac3", False):
@@ -492,8 +492,8 @@ class Solver:
             from the other variable (Remove inconsistent values)
             @return 1-boolean (True if we remove a value)
             """
-            dX = self.domain[numVarX]
-            dY = self.domain[numVarY]
+            dX = self.domain[numVar_1]
+            dY = self.domain[numVar_2]
             revised = False
             for v in list(dX):
                 # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
@@ -506,9 +506,14 @@ class Solver:
         valCommuneVars = tools.deepish_copy(self.contraintes.valeurCommuneVars)
         queue = [(numVarX, numVarY) for numVarX in valCommuneVars for numVarY in valCommuneVars[numVarX]]
         queue = set(tuple(sorted(l)) for l in queue) # Removing permutations from queue
+        print sum(len(d) for d in self.domain.values())
         while queue:
             numVarX, numVarY = queue.pop()
-            revised(numVarX, numVarY)
+            if revised(numVarX, numVarY):
+                for numVarK in valCommuneVars[numVarX]:
+                    if numVarK != numVarX and numVarK != numVarY:
+                        queue.add((numVarX, numVarK))
+        print sum(len(d) for d in self.domain.values())
 
 
     def mrv(self, instance, forwardcheck=True):
@@ -548,6 +553,7 @@ class Solver:
         if kwargs.get('first', False):
             instance = {} #iPython debug
             variables = tools.deepish_copy(self.variables)
+            print sum(len(d) for d in self.domain.values())
 
         if not variables:
             assert self.isComplete(instance)
