@@ -89,7 +89,7 @@ def write_EntryFile(filename,listeTuple, pathOk = False) :
 
     if not os.path.exists(GRID_PATH) and not pathOk:
         os.makedirs(GRID_PATH)
-
+    gridz = []
     path = GRID_PATH+""+filename if not pathOk else filename
     # on ecrase le precedent contenu du fichier
     with open(path,'w') as monfile:
@@ -97,11 +97,14 @@ def write_EntryFile(filename,listeTuple, pathOk = False) :
             # on genere le probleme correspondant
             # TODO : TO TRY ligns,cols,nb = tuplet
             grid = GrilleMots.genere_grid(*tuplet)
+            gridz.append(grid)
             # on ajoute son affichage file au file en question
             monfile.write(grid.str_writeEntryFile())
 
         # on declare la fin du fichier
         monfile.write("\n0 0")
+    
+    return gridz
 
 def write_GrilleFile(filename,gridz,pathOk=False) :
     """
