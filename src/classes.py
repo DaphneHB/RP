@@ -37,7 +37,7 @@ class GrilleMots:
         self.variables = dict()
         # on crée l'objet contrainte, lui indiquant qu'il y a nbMots Mots
         self.contraintes = Contraintes(self.height,self.width)
-
+        self.solution = False
         # récupération de la grille suivant son type
         # la grille en int np.ndarray sera alors enregistrée dans self.grille
         # et la string dans self.str_grille
@@ -212,18 +212,66 @@ class GrilleMots:
         else:
             return False
 
+    def recupSolution(self):
+        pass
+    
     def __str__(self):
         print self.str_grille
         string = "Grille {}*{} avec {} mots\n".format(self.height,self.width,self.nbMots)
 
         # pour chaque variable on affiche ses caracteristiques
-        #for num,val in self.variables.iteritems():
-        #    string+= "\tMot {} commençant en {}, avec {} lettres et en direction {}\n".format(num,val[0],val[1],val[2])
+        for num,val in self.variables.iteritems():
+            string+= "\tMot {} commençant en {}, avec {} lettres et en direction {}\n".format(num,val[0],val[1],val[2])
         return str(string)
 
     def str_writeEntryFile(self):
         string = "\n{} {}\n".format(self.height,self.width)
         string+=self.str_grille
+        return string
+        
+    def str_writeSolutionFile(self):
+        # fichier solution au format 
+        # nbVars contenues dans la grille
+        # grille de lettres et de # pour les cases noires 
+        string = "\n{}\n".format(self.nbMots)
+        i = j = 0
+        # pour chaque variable horizontale
+        # on place les lettres correspondantes
+        for num,((iv,jv),taille,orient,val) in self.variables.items():
+            print "\nvar",num,"debute en (",iv,",",jv,")"
+            print "{} : {}".format(num,taille)
+            # si la variable est verticale on arrete
+            print "i,j = {},{}\n".format(i,j)
+            if orient==Orientation.VERTICAL:
+                string+="\n"
+                break
+            if iv!=i or jv!=j:
+                print "decales ............."
+            
+                # si la prochaine variable est plus loin on met des cases noires
+                print "intervalles: i={}; j={}".format(range(i,iv),range(j,jv))
+                for c in range(j,jv):
+                    j = c
+                    print "j change",j
+                    for l in range(i,iv):
+                        i = l
+                        print "i change:",i
+                        string+="\n"
+                    string+="# "
+                    
+            else:
+                print 'OK!'
+            # sinon on ecrit lettre par lettre la valeur en string de la variable
+            for ind in range(taille):
+                j = (j+ind)%self.width
+                # TODO : cas inimaginable?!
+                if val is None:
+                    string+="_ "
+                    continue
+                string += val[ind]+" "
+             # end if
+        # end for
+        
         return string
 
     def fillGrid(self, instance):
@@ -342,7 +390,7 @@ class Contraintes:
 class Solver:
 
     def __init__(self, grid, dictionnaire, **kwargs):
-        self.grid = deepcopy(grid)
+        self.grid = grid
         self.dictionnaire = deepcopy(dictionnaire)
         self.variables = self.grid.variables
         self.contraintes = self.grid.contraintes
@@ -358,8 +406,10 @@ class Solver:
             print time.time() - start
         start = time.time()
         instance = self.forwardChecking(first=True)
-        print time.time() - start
+        stop = time.time() - start
+        print stop
         self.grid.fillGrid(instance)
+        self.grid.solution = True
         print instance
         print self.grid.variables
 
