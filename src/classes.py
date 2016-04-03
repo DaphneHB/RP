@@ -86,7 +86,7 @@ class GrilleMots:
                     # si la case precedente etait un un ou on est passé a la ligne -> nouveau mot
                     nouvMot = True
                     continue
-                else: # case blanche
+                elif grille[i,j]==0: # case blanche
                     # si c'est un nouveau mot, on ecrase la taille precedente
                     # et si ce n'est pas le premier mot (donc que la taille est non nulle, ie il y a un mot)
                     if nouvMot and tailleMot!=0:
@@ -110,8 +110,9 @@ class GrilleMots:
                 # end if
             #end for
         #end for
-        ### on enregistre le dernier mot de sortie de boucle
-        self.enregistreNouvMot(iMot,jMot,numMot,tailleMot,Orientation.HORIZONTAL)
+        ### on enregistre le dernier mot de sortie de boucle s'il existe
+        if tailleMot!=0:
+            self.enregistreNouvMot(iMot,jMot,numMot,tailleMot,Orientation.HORIZONTAL)
         # on remet la taille du mot a 0
         tailleMot = 0
         # on passe au mot suivant:
@@ -123,7 +124,7 @@ class GrilleMots:
                 if grille[i,j]==1:
                     nouvMot = True
                     continue
-                else:
+                elif grille[i,j]==0:
                     # si c'est un nouveau mot, on ecrase la taille precedente
                     # et si ce n'est pas le premier mot (donc que la taille est non nulle, ie il y a un mot)
                     if nouvMot and tailleMot!=0:
@@ -147,8 +148,9 @@ class GrilleMots:
                 # end if
             #end for
         #end for
-        ### on enregistre le dernier mot de sortie de boucle
-        self.enregistreNouvMot(iMot,jMot,numMot,tailleMot,Orientation.VERTICAL)
+        ### on enregistre le dernier mot de sortie de boucle s'il existe
+        if tailleMot!=0:
+            self.enregistreNouvMot(iMot,jMot,numMot,tailleMot,Orientation.VERTICAL)
         ## on recupere les contraintes de croisement de toutes les variables
         self.buildConstraints()
 
@@ -213,7 +215,7 @@ class GrilleMots:
 
     def recupSolution(self):
         pass
-
+    
     def __str__(self):
         print self.str_grille
         string = "Grille {}*{} avec {} mots\n".format(self.height,self.width,self.nbMots)
@@ -225,20 +227,22 @@ class GrilleMots:
 
     def str_writeEntryFile(self):
         string = "\n{} {}\n".format(self.height,self.width)
-        string+=self.str_grille
+        string+=self.str_grille+"\n"
         return string
-
+        
     def str_writeSolutionFile(self):
-        # fichier solution au format
+        # fichier solution au format 
+        # taille grille lignes*colonnes
         # nbVars contenues dans la grille
-        # grille de lettres et de # pour les cases noires
-        string = "\n{}\n".format(self.nbMots)
+        # grille de lettres et de # pour les cases noires 
+        string = "\n{} {}".format(self.height,self.width)
+        string += "\n{}\n".format(self.nbMots)
         i = j = 0
         # pour chaque variable horizontale
         # on place les lettres correspondantes
         for num,((iv,jv),taille,orient,val) in self.variables.items():
             print "\nvar",num,"debute en (",iv,",",jv,")"
-            print "{} : {}".format(num,taille)
+            print "{} : {}".format(orient,taille)
             # si la variable est verticale on arrete
             print "i,j = {},{}\n".format(i,j)
             if orient==Orientation.VERTICAL:
@@ -246,31 +250,42 @@ class GrilleMots:
                 break
             if iv!=i or jv!=j:
                 print "decales ............."
-
-                # si la prochaine variable est plus loin on met des cases noires
-                print "intervalles: i={}; j={}".format(range(i,iv),range(j,jv))
-                for c in range(j,jv):
-                    j = c
-                    print "j change",j
-                    for l in range(i,iv):
-                        i = l
+                # la prochaine variable est plus loin on met des cases noires
+                while j!=jv or i!=iv:
+                    # si les colonnes sont décalées
+                    if j>=self.width:
+                        j=0
+                        i=i+1
                         print "i change:",i
-                        string+="\n"
-                    string+="# "
-
+                        string+="\n"                    
+                        
+                    while j!=jv:
+                        j = (j+1)%self.width
+                        string+="# "
+                        print "j change",j
+                    # end while
+                    if i!=iv:
+                        i = (i+1)%self.height
+                        print "i change:",i
+                        string+="\n"                    
+                # end while
+                    
             else:
                 print 'OK!'
             # sinon on ecrit lettre par lettre la valeur en string de la variable
             for ind in range(taille):
-                j = (j+ind)%self.width
+                print "{},{}".format(i,j+ind)
                 # TODO : cas inimaginable?!
                 if val is None:
                     string+="_ "
                     continue
                 string += val[ind]+" "
+                # end if
+            # end for
+            j = j + taille
              # end if
         # end for
-
+        print string
         return string
 
     def fillGrid(self, instance):
@@ -425,8 +440,7 @@ class Solver:
             self.grid.solution = True
         else:
             self.grid.solution = False
-
-
+        
     def isComplete(self, instance):
         """
         Check if assignment has complete assigned all variables.
@@ -509,8 +523,7 @@ class Solver:
         while queue:
             numVarX, numVarY = queue.pop()
             revised(numVarX, numVarY)
-
-
+            
     def mrv(self, instance, forwardcheck=True):
         """
         Minimum-remaining-value (MRV) heuristic
@@ -566,6 +579,8 @@ class Solver:
                 del instance[numVar]
             variables = tools.deepish_copy(var_orig)
             self.domain = tools.deepish_copy(dom_orig)
+        # aucune solution trouvée:
+        #raise err.NoSolutionFoundException(self.grid)
         return False
 
     def isConsistent2(self, numVar, v, instance):

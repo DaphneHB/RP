@@ -15,12 +15,13 @@ ABS_PATH_PRINC = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 def isString(value):
     return type(value) is str
-
+    
 def isList(value):
     return type(value) is list
-
+    
 def isTab(value):
     return type(value) is ndarray
+    
 
 def deepish_copy(org):
     '''
@@ -38,4 +39,3 @@ def deepish_copy(org):
 
     return out
     
-isTab([])
