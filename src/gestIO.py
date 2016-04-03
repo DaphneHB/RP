@@ -6,6 +6,7 @@ Created on Thu Mar 24 22:18:40 2016
 """
 import os
 from classes import *
+from algorithms import Solver
 #import algos
 from tools import OUT_STREAM,ABS_PATH_PRINC
 
@@ -139,16 +140,15 @@ def write_GrilleFile(filename,gridz,pathOk=False) :
     path = GRID_PATH+""+filename if not pathOk else filename
     # on ecrase le precedent contenu du fichier
     monfile = None
-    for grid in gridz:
+    try:
+        monfile = open(path,'w')
+    except:
         try:
-            monfile = open(path,'w')
+            monfile = open(filename,'w')
         except:
-            try:
-                monfile = open(filename,'w')
-            except:
-                print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
-                return None
-
+            print "Nom de fichier ou arborescence choisie invalide\nVeuillez essayer de sauvegarder le fichier avant tout"
+            return None
+    for grid in gridz:
         # on ajoute son affichage file au file en question
         monfile.write(grid.str_writeEntryFile())
         monfile.write("\n")
@@ -168,7 +168,6 @@ def write_SolutionFile(filename,gridz,pathOk=False) :
     et les ecrit dans un fichier solution_filename écrasé
     Renvoie la liste des temps d'execution de la resolution pour chaque probleme
     """
-    tabTps = list()
     if not os.path.exists(SOLUTION_PATH) and not pathOk: 
         os.makedirs(SOLUTION_PATH) 
 
@@ -188,7 +187,7 @@ def write_SolutionFile(filename,gridz,pathOk=False) :
         
     for grid in gridz :
         # si la solution du probleme n'a pas deja eté générée            
-        if grid.solution is None:
+        if not grid.solution:
             # on lance la resolution du probleme correspondant
             # TODO : interessant? 
             grid.recupSolution()
