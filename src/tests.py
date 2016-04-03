@@ -20,7 +20,7 @@ dic.recupDictionnaire()
 
 grid = io.read_file("grille1.txt")[0]
 print grid
-solver = cl.Solver(grid, dic.DICTIONNAIRE)
+solver = cl.Solver(grid, dic.DICTIONNAIRE, random=False)
 solver.ac3()
 
 # start = time.time()

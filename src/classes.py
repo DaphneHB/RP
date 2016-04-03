@@ -428,7 +428,7 @@ class Solver:
                 else:
                     contraintes.valeurCommuneVars[numVarX] = neighbors
                     queue.append(numVarX)
-            return True
+        return True
 
     def mrv(self, instance):
         """
