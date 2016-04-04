@@ -375,7 +375,7 @@ class Contraintes:
         for num,var in variables.items():
             if num==num_var:
                 continue
-            #sinon
+            #sinond
             #print var[3]
             if var[3]==str_mot:
                 raise err.SimilarWordException(num_var,num,str_mot)
