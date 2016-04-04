@@ -22,11 +22,23 @@ dic.recupDictionnaire()
 
 
 ######### getting the grid
+<<<<<<< HEAD
 grid = io.read_file("grilles1.txt")[2]
 #grid = io.GrilleMots.genere_grid(7,7,4)
+=======
+#grid = io.read_file("grilles1.txt")[2]
+grid = io.GrilleMots.genere_grid(7,7,4)
+>>>>>>> 71ee7800d4a0927491513271c389eafef708cce7
 grid = io.write_EntryFile("aleatoire7-7-10.txt",[(7,7,10),(7,7,10),(7,7,10)])[0]
 grid = io.write_XGridEntryFile("3aleatoire5-5-1.txt",3,(5,5,1))[0]
 
 solv = io.Solver(grid, dic.DICTIONNAIRE,random=True)
+<<<<<<< HEAD
 #solv.run()
 #io.write_SolutionFile("grille1.txt",[grid])
+=======
+solv.run(ac3=False, verbose=1)
+io.write_SolutionFile("grille1.txt",[grid])
+print grid.str_writeSolutionFile()
+print grid.str_grille
+>>>>>>> 71ee7800d4a0927491513271c389eafef708cce7

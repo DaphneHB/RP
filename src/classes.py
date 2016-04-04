@@ -213,7 +213,7 @@ class GrilleMots:
 
     def recupSolution(self):
         pass
-    
+
     def __str__(self):
         print self.str_grille
         string = "Grille {}*{} avec {} mots\n".format(self.height,self.width,self.nbMots)
@@ -227,17 +227,17 @@ class GrilleMots:
         string = "\n{} {}\n".format(self.height,self.width)
         string+=self.str_grille+"\n"
         return string
-        
+
     def str_writeSolutionFile(self):
         matrix = np.empty([self.height, self.width], dtype="S1")
         # on initialise la matrice à # -> case noire partout
         matrix[:] = "#"
-        # fichier solution au format 
+        # fichier solution au format
         # taille grille lignes*colonnes
         # nbVars contenues dans la grille
-        # grille de lettres et de # pour les cases noires 
-        string = "\n{} {}".format(self.height,self.width)
-        string += "\n{}\n".format(self.nbMots)
+        # grille de lettres et de # pour les cases noires
+        string = "\nSize: {}, {}".format(self.height,self.width)
+        string += "\n{} words\n".format(self.nbMots)
         # pour chaque variable horizontale
         # on place les lettres correspondantes
         for num,((iv,jv),taille,orient,val) in self.variables.items():
@@ -267,7 +267,7 @@ class GrilleMots:
         for num,var in self.variables.items():
             var[3] = None
         self.solution = False
-            
+
     """
     To backtrack a value defined for a var
     For the algo to change his mind
@@ -278,7 +278,7 @@ class GrilleMots:
             raise err.NameAlreadyDefinedException(numVar,otherVal)
         else:
             val[3] = otherVal
-        
+
     ##################### GENERATION ALEATOIRE D'UNE GRILLE #################
     @staticmethod
     def genere_grid(lignes,colonnes,nbCasesNoires) :

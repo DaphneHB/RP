@@ -5,7 +5,7 @@ Created on Mon Apr  4 00:07:45 2016
 @author: daphnehb
 """
 
-import tools, time, random
+import tools, time, random, itertools
 
 
 class Solver:
@@ -19,37 +19,55 @@ class Solver:
                 self.dictionnaire.get(self.contraintes.tailleFixeVars[X], list())
                 ) for X in self.variables}
         self.random = kwargs.get('random', False)
+        self.runningTime = 0
         if self.random:
             for numVar in self.domain:
                 random.shuffle(self.domain[numVar]) # shuffle dictionnary
-                
-    def run(self, ac3=False, fc=True, cbj=False, **kwargs):
+
+    def run(self, ac3=False, fc=False, cbj=False, **kwargs):
         verbose = kwargs.get("verbose", 0)
+        if not (kwargs.get("cbj", False) or kwargs.get("fc", False) or fc or cbj):
+            fc = True
+        self.verbose = verbose
+        if verbose > 0: print "\n"
         if ac3 or kwargs.get("ac3", False):
+            if verbose > 0: print "AC3 running..."
             start = time.time()
             self.ac3()
-            if verbose > 0: print time.time() - start
+            stop = time.time() - start
+            if verbose > 0: print "{:10}: {:4}s\n".format("AC3 Running Time", stop)
+            self.runningTime += stop
         # l'algo selon les parametres
-        if fc:
+        if fc or kwargs.get("fc", False):
+            if verbose > 0: print "FC running..."
             start = time.time()
             instance = self.forwardChecking(first=True)
             stop = time.time() - start
-        elif cbj:
+            if verbose > 0: print "{:10}: {:4}s\n".format("FC Running Time", stop)
+            self.runningTime += stop
+        elif cbj or kwargs.get("cbj", False):
+            if verbose > 0: print "CBJ running..."
             start = time.time()
-            instance = self.conflictBackJumping(self.variables,{})
+            instance = self.conflictBackJumping(first=True)
             stop = time.time() - start
+            if verbose > 0: print "{:10}: {:4}s\n".format("CBJ Running Time", stop)
+            self.runningTime += stop
         else:
+            if verbose > 0: print "{:10}: {:4}s\n".format("Solver Running Time", self.runningTime)
             return False
-        print stop
-        if verbose > 0: print time.time() - start
-        if verbose > 0: print instance
-        if instance:
+        if verbose > 0: print "{:15}: {:3}s\n".format("Solver Running Time", self.runningTime)
+        if verbose > 0: print "Solution:\n", instance
+        if isinstance(instance, dict):
             self.grid.fillGrid(instance)
             if verbose > 1: print self.grid.variables
             self.grid.solution = True
+            return True
         else:
+            assert isinstance(instance, bool), "Error, instance type is not standard"
+            print "Aucune solution."
             self.grid.solution = False
-        
+            return False
+
     def isComplete(self, instance):
         """
         Check if assignment has complete assigned all variables.
@@ -132,19 +150,20 @@ class Solver:
         while queue:
             numVarX, numVarY = queue.pop()
             revised(numVarX, numVarY)
-            
-    def mrv(self, instance, forwardcheck=True):
+
+    def mrv(self, instance, variables):
         """
         Minimum-remaining-value (MRV) heuristic
         @return the variable from amongst those that have the fewest legal values
         """
         unassigned_x = {}
-        for numVar, d in self.domain.items():
+        vars_left = set(variables.iterkeys()) - set(instance.iterkeys())
+        for numVar in vars_left:
+            d = self.domain[numVar]
             if len(d) > 0:
                 unassigned_x[numVar] = len(d)
         for x in sorted(unassigned_x, key=unassigned_x.get):
-            if x not in instance:
-                return x
+            return x
         assert False, "No variable found"
 
     def checkForward(self, numVark, v, variables):
@@ -163,7 +182,7 @@ class Solver:
 
     def launchForwardChecking(self):
         return self.forwardChecking(first=True)
-        
+
     def forwardChecking(self, variables={}, instance={}, **kwargs):
         """
         Search for solution and add to assignment
@@ -177,7 +196,7 @@ class Solver:
             assert self.isComplete(instance)
             return instance
 
-        numVar = self.mrv(instance)
+        numVar = self.mrv(instance, variables)
         variables.pop(numVar, None)
         var_orig = tools.deepish_copy(variables)
         dom_orig = tools.deepish_copy(self.domain)
@@ -194,54 +213,67 @@ class Solver:
         #raise err.NoSolutionFoundException(self.grid)
         return False
 
-    def isConsistent2(self, numVar, v, instance):
-        conflict_var1 = set()
-        conflict_var2 = set()
-        neighbors = self.getCommuneVars(numVar)
-        for var, indXY in neighbors.items():
-            try:
-                vv = instance[var]
-                indX, indY = indXY
-                if not self.areLetterIntersect(v, vv, indX, indY):
-                    conflict_var1.add(var)
-                elif not self.areDifferentWords(v, vv):
-                    conflict_var2.add(var)
-            except KeyError:
-                pass
-        return conflict_var1 | conflict_var2
-
+    def isInstanceConsistent(self, instance, numVar, v):
+        interDict = self.contraintes.intersectIndexes
+        c1_conflict = set()
+        c2_conflict = set()
+        for var in instance:
+            if var == numVar:
+                continue
+            if var > numVar:
+                tupleVar = numVar, var
+                v_ = v
+                vv_ = instance[var]
+            else:
+                tupleVar = var, numVar
+                v_ = instance[var]
+                vv_ = v
+            if not c2_conflict and not self.areDifferentWords(v_, vv_):
+                c1_conflict.add(var)
+            if not c1_conflict and tupleVar in interDict and not self.areLetterIntersect(v_, vv_, *interDict[tupleVar]):
+                c2_conflict.add(var)
+        return c1_conflict | c2_conflict
 
     def launchConflictBackJumping(self):
         return self.conflictBackJumping(self.variables,{})
-        
-    def conflictBackJumping(self, variables, instance):
+
+    def conflictBackJumping(self, variables={}, instance={}, depth=0, **kwargs):
         """
         CBJ fait appel à la fonction consistante qui recoit une
         instanciation et retourne l'ens des variables de la contrainte
         violée si i est inconsistante.
         """
+
+        if kwargs.get('first', False):
+            instance = {} #iPython debug
+            variables = tools.deepish_copy(self.variables)
+
         if not variables:
             assert self.isComplete(instance)
-            return variables
-        numVar = self.mrv(instance)
-        #random.shuffle(self.domain[numVar]) # shuffle dictionnary
+            return instance
+
+        if depth == 0:
+            self.dom_orig = tools.deepish_copy(self.domain)
+
+        numVar = depth+1
+        self.domain[numVar] = tools.deepish_copy(self.dom_orig)[numVar]
         conflict = set()
         nonBJ = True
         for v in self.domain[numVar]:
             if not nonBJ: break
-            local_conflict = self.isConsistent2(numVar, v, instance)
-            if not local_conflict:
-                _variables = tools.deepish_copy(variables)
-                _variables.pop(numVar, None)
-                _instance = tools.deepish_copy(instance)
-                _instance[numVar] = v
-                child_conflict = self.conflictBackJumping(_variables, _instance)
-                if v in _instance:
-                    conflict.update(child_conflict)
+            local_conflict = self.isInstanceConsistent(instance, numVar, v)
+            if len(local_conflict) == 0:
+                variables_ = tools.deepish_copy(variables)
+                variables_.pop(numVar, None)
+                instance_ = tools.deepish_copy(instance)
+                instance_[numVar] = v
+                child_conflict = self.conflictBackJumping(variables_, instance_, depth+1)
+                if numVar in child_conflict:
+                    conflict |= child_conflict - {numVar}
                 else:
-                    conflict = child_conflict
-                    nonBJ = False
+                    #print instance, depth, len(self.domain[numVar])
+                    return child_conflict
             else:
-                conflict.update(local_conflict)
-        print conflict
+                self.domain[numVar].remove(v)
+                conflict |= local_conflict
         return conflict
