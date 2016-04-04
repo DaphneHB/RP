@@ -15,14 +15,17 @@ class Solver:
         self.dictionnaire = tools.deepish_copy(dictionnaire)
         self.variables = self.grid.variables
         self.contraintes = self.grid.contraintes
+        self.random = kwargs.get('random', False)
+        self.runningTime = 0
+        self.assignment = {}
         self.domain = {X: list(
                 self.dictionnaire.get(self.contraintes.tailleFixeVars[X], list())
                 ) for X in self.variables}
-        self.random = kwargs.get('random', False)
-        self.runningTime = 0
         if self.random:
             for numVar in self.domain:
                 random.shuffle(self.domain[numVar]) # shuffle dictionnary
+
+ #################################### Run ######################################
 
     def run(self, ac3=False, fc=False, cbj=False, **kwargs):
         verbose = kwargs.get("verbose", 0)
@@ -58,6 +61,7 @@ class Solver:
         if verbose > 0: print "{:15}: {:3}s\n".format("Solver Running Time", self.runningTime)
         if verbose > 0: print "Solution:\n", instance
         if isinstance(instance, dict):
+            self.assignment = instance
             self.grid.fillGrid(instance)
             if verbose > 1: print self.grid.variables
             self.grid.solution = True
@@ -67,6 +71,8 @@ class Solver:
             print "Aucune solution."
             self.grid.solution = False
             return False
+
+ #################################### Tools ####################################
 
     def isComplete(self, instance):
         """
@@ -122,6 +128,8 @@ class Solver:
         # Check word uniqueness constraint
         return self.areDifferentWords(v, vv)
 
+ #################################### AC-3 ####################################
+
     def ac3(self):
         """
         Check arc-consistency in CSP data structure
@@ -151,10 +159,13 @@ class Solver:
             numVarX, numVarY = queue.pop()
             revised(numVarX, numVarY)
 
-    def mrv(self, instance, variables):
+ ################################## Heuristiques ##################################
+
+    def mrvHeuristic(self, instance, variables):
         """
         Minimum-remaining-value (MRV) heuristic
-        @return the variable from amongst those that have the fewest legal values
+        Variable with the smallest domain in the current assignment
+        @return int
         """
         unassigned_x = {}
         vars_left = set(variables.iterkeys()) - set(instance.iterkeys())
@@ -165,6 +176,33 @@ class Solver:
         for x in sorted(unassigned_x, key=unassigned_x.get):
             return x
         assert False, "No variable found"
+
+    def naiveHeuristic(self, instance, variables):
+        """
+        First item in the list of variables to instantiate
+        @return int
+        """
+        return variables.keys()[0]
+
+    def constrMaxHeuristic(self, instance, variables):
+        """
+        Variable with maximum constraints with other variables
+        """
+        unassigned_x = {}
+        vars_left = set(variables.iterkeys()) - set(instance.iterkeys())
+        for numVar in vars_left:
+            c = self.getCommuneVars(numVar)
+            unassigned_x[numVar] = len(c)
+        max_sorted = tuple(x for x, val in unassigned_x.items() if val == max(unassigned_x.values()))
+        if max_sorted:
+            return random.choice(max_sorted)
+        print vars_left, max(unassigned_x, key=unassigned_x.get), sorted(unassigned_x, key=unassigned_x.get)
+        assert False, "No variable found"
+
+ ############################ Forward Checking ################################
+
+    def launchForwardChecking(self):
+        return self.forwardChecking(first=True)
 
     def checkForward(self, numVark, v, variables):
         """
@@ -180,9 +218,6 @@ class Solver:
                 return False
         return True
 
-    def launchForwardChecking(self):
-        return self.forwardChecking(first=True)
-
     def forwardChecking(self, variables={}, instance={}, **kwargs):
         """
         Search for solution and add to assignment
@@ -196,11 +231,13 @@ class Solver:
             assert self.isComplete(instance)
             return instance
 
-        numVar = self.mrv(instance, variables)
+        numVar = self.mrvHeuristic(instance, variables)
         variables.pop(numVar, None)
         var_orig = tools.deepish_copy(variables)
         dom_orig = tools.deepish_copy(self.domain)
-        for v in self.domain[numVar]:
+        Dxk = self.domain[numVar][:]
+        while Dxk:
+            v = Dxk.pop()
             if self.checkForward(numVar, v, variables):
                 instance[numVar] = v # Instanciation du mot
                 result = self.forwardChecking(variables, instance)
@@ -213,67 +250,63 @@ class Solver:
         #raise err.NoSolutionFoundException(self.grid)
         return False
 
-    def isInstanceConsistent(self, instance, numVar, v):
-        interDict = self.contraintes.intersectIndexes
-        c1_conflict = set()
-        c2_conflict = set()
-        for var in instance:
-            if var == numVar:
-                continue
-            if var > numVar:
-                tupleVar = numVar, var
-                v_ = v
-                vv_ = instance[var]
-            else:
-                tupleVar = var, numVar
-                v_ = instance[var]
-                vv_ = v
-            if not c2_conflict and not self.areDifferentWords(v_, vv_):
-                c1_conflict.add(var)
-            if not c1_conflict and tupleVar in interDict and not self.areLetterIntersect(v_, vv_, *interDict[tupleVar]):
-                c2_conflict.add(var)
-        return c1_conflict | c2_conflict
+ ################################## CBJ + FC ####################################
 
     def launchConflictBackJumping(self):
         return self.conflictBackJumping(self.variables,{})
 
-    def conflictBackJumping(self, variables={}, instance={}, depth=0, **kwargs):
-        """
-        CBJ fait appel à la fonction consistante qui recoit une
-        instanciation et retourne l'ens des variables de la contrainte
-        violée si i est inconsistante.
-        """
+    def conflictBackJumping(self, variables={}, instance={}, prevxk=None, depth=0, **kwargs):
 
-        if kwargs.get('first', False):
-            instance = {} #iPython debug
+        def consistante(instance, xk, v):
+            conflict = set()
+            for var, vv in instance.items():
+                if not self.isConsistent(xk, v, var, vv):
+                    conflict.add(y)
+            return list(conflict)
+
+        if kwargs.get("first", False):
             variables = tools.deepish_copy(self.variables)
+        if not kwargs.get("heuristic", False):
+            heuristic = self.mrvHeuristic
+        if instance:
+            assert prevxk
+            prev = {prevxk}
 
         if not variables:
-            assert self.isComplete(instance)
             return instance
 
-        if depth == 0:
-            self.dom_orig = tools.deepish_copy(self.domain)
-
-        numVar = depth+1
-        self.domain[numVar] = tools.deepish_copy(self.dom_orig)[numVar]
+        xk = heuristic(instance, variables)
+        if not self.domain[xk]:
+            return set([v for v in self.getCommuneVars(xk) if v in instance])
         conflict = set()
         nonBJ = True
-        for v in self.domain[numVar]:
-            if not nonBJ: break
-            local_conflict = self.isInstanceConsistent(instance, numVar, v)
-            if len(local_conflict) == 0:
-                variables_ = tools.deepish_copy(variables)
-                variables_.pop(numVar, None)
-                instance_ = tools.deepish_copy(instance)
-                instance_[numVar] = v
-                child_conflict = self.conflictBackJumping(variables_, instance_, depth+1)
-                if numVar in child_conflict:
-                    conflict |= child_conflict - {numVar}
+        variables.pop(xk, None)
+        saved_domain = dict()
+        for var in variables:
+            savedDom[var] = self.domain[var][:]
+        Dxk = self.domain[xk][:]
+        while Dxk and nonBJ:
+            v = Dxk.pop()
+            instance_ = tools.deepish_copy(instance)
+            instance_[xk] = v
+            if self.checkForward(xk, v, variables):
+                local_conflict = consistante(instance, xk, v)
+                if not local_conflict:
+                    variables_ = tools.deepish_copy(variables)
+                    child_conflict = self.conflictBackJumping(variables_, instance_, xk, depth+1)
+                    if isinstance(child_conflict, dict):
+                        return child_conflict
+                    if xk in child_conflict:
+                        conflict |= child_conflict
+                    else:
+                        conflict = child_conflict
+                        nonBJ = False
                 else:
-                    #print instance, depth, len(self.domain[numVar])
-                    return child_conflict
-            else:
-                self.domain[numVar].remove(v)
-                conflict |= local_conflict
+                    conflict = local_conflict - {xk}
+            for var, domain in saved_domain.items():
+                self.domain[var] = domain
+        if xk in conflict:
+            conflict.remove(xk)
+        if not conflict:
+            conflict |= prev
         return conflict
