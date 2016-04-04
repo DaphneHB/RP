@@ -27,8 +27,17 @@ class Solver:
 
  #################################### Run ######################################
 
-    def run(self, ac3=False, fc=False, cbj=False, **kwargs):
+    def run(self, ac3=False, fc=False, cbj=False, heuristic=-1, **kwargs):
         verbose = kwargs.get("verbose", 0)
+        heuristic = kwargs.get("heuristic", -1)
+        if not (kwargs.get("heuristic", False) or heuristic == -1):
+            if heuristic == 0:
+                heuristic = self.naiveHeuristic
+            elif heuristic == 1:
+                heuristic = self.constrMaxHeuristic
+            else:
+                heuristic = self.mrvHeuristic
+
         if not (kwargs.get("cbj", False) or kwargs.get("fc", False) or fc or cbj):
             fc = True
         self.verbose = verbose
@@ -141,12 +150,20 @@ class Solver:
             from the other variable (Remove inconsistent values)
             @return 1-boolean (True if we remove a value)
             """
-            dX = self.domain[numVarX]
-            dY = self.domain[numVarY]
+            constraints = self.getCommuneVars(numVar_1).get(numVar_2, False)
+            if not constraints:
+                return False
+
+            dX = self.domain[numVar_1]
+            dY = self.domain[numVar_2]
             revised = False
             for v in list(dX):
-                # If Xi=x conflicts with Xj=y for every possible y, eliminate Xi=x
-                if not any(self.isConsistent(numVar_1, v, numVar_2, vv) for vv in dY):
+                anyConsist = False
+                for vv in dY:
+                    if self.isConsistent(numVar_1, v, numVar_2, vv):
+                        anyConsist = True
+                        break
+                if not anyConsist:
                     revised = True
                     dX.remove(v)
             assert dX, "AC3 cant made CSP consistent"
@@ -157,7 +174,10 @@ class Solver:
         queue = set(tuple(sorted(l)) for l in queue) # Removing permutations from queue
         while queue:
             numVarX, numVarY = queue.pop()
-            revised(numVarX, numVarY)
+            if revised(numVarX, numVarY):
+                for numVarK in self.getCommuneVars(numVarX):
+                    if numVarK != numVarY:
+                        queue.add((numVarK, numVarX))
 
  ################################## Heuristiques ##################################
 
@@ -277,19 +297,20 @@ class Solver:
 
         xk = heuristic(instance, variables)
         if not self.domain[xk]:
+            print "ok"
             return set([v for v in self.getCommuneVars(xk) if v in instance])
         conflict = set()
         nonBJ = True
         variables.pop(xk, None)
         saved_domain = dict()
         for var in variables:
-            savedDom[var] = self.domain[var][:]
+            saved_domain[var] = self.domain[var][:]
         Dxk = self.domain[xk][:]
         while Dxk and nonBJ:
             v = Dxk.pop()
-            instance_ = tools.deepish_copy(instance)
-            instance_[xk] = v
             if self.checkForward(xk, v, variables):
+                instance_ = {xk: v}
+                instance_.update(instance)
                 local_conflict = consistante(instance, xk, v)
                 if not local_conflict:
                     variables_ = tools.deepish_copy(variables)

@@ -56,7 +56,7 @@ def tpsAlgosUneGrid(grid,nbIter=ITERATIONS):
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-        
+
     return [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
 
 def boxPlotTabs(xlabels,ylabel,data):
@@ -71,7 +71,7 @@ def boxPlotTabs(xlabels,ylabel,data):
     plt.ylabel(ylabel)
     plt.save_fig(io.PLOT_PATH+'algos_diff.png')
     plt.show()
-    
+
 def plotsGridLength():
     # on recupere le dictionnaire
     dic.recupDictionnaire()
@@ -98,16 +98,16 @@ def plotsGridLength():
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-    
+
     times = [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-    
+
     for i in range(len(times)):
         plt.plot(times[i])
     #plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
     # TODO : label tps en fct de la taille de la grille
     #plt.xlabel(np.arange(LIGN_MIN,LIGN_MAX,PAS))
     plt.show()
-    
+
 def plotsDiffDicos(grid):
     tpsFC = []
     tpsFcAc3 = []
@@ -136,9 +136,9 @@ def plotsDiffDicos(grid):
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-    
+
     times = [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-    
+
     for i in range(len(times)):
         plt.plot(times[i])
     #plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
@@ -171,9 +171,9 @@ def plotsNoiresDiff():
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-    
+
     times = [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-    
+
     for i in range(len(times)):
         plt.plot(times[i])
     #plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
@@ -189,8 +189,8 @@ C = io.read_file("grille3.txt")[0]
 
 # sauvegarde et affichage des graphes  sur une grille selon l'algo
 algos = ['FC sans AC3','FC avec AC3']#,'FC-CBJ sans AC3','FC-CBJ avec AC3']
-#times = tpsAlgosUneGrid(A)
-#boxPlotTabs(algos,'Temps',times)    
+times = tpsAlgosUneGrid(A)
+boxPlotTabs(algos,'Temps',times)    
 
 #plotsGridLength()
 
