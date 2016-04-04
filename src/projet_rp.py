@@ -11,24 +11,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gestDict as dic
 
-ITERATIONS = 5
+ITERATIONS = 50
 LIGN_DEF = 5
 LIGN_MIN = 3
 LIGN_MAX = 7
 PAS = 2
 CASE_NOIRE_MIN = 0
 CASE_NOIRE_MAX = 10
-
-def time_it(functions, iterations, grid):
-    time_log = np.empty((iterations,))
-    for i in range(iterations):
-        solver = io.Solver(grid, dic.DICTIONNAIRE, random=True)
-        start = time.time()
-        for f in functions:
-            f(solver)
-        time_log[i] = time.time() - start
-        #print "time({}) = {:4}".format(i, time_log[i])
-    return time_log #,np.mean(time_log), np.std(time_log)
 
 def tpsAlgosUneGrid(grid,nbIter=ITERATIONS):
     # on recupere le dictionnaire
@@ -56,22 +45,37 @@ def tpsAlgosUneGrid(grid,nbIter=ITERATIONS):
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
+        # pour CBJ
+        dt = time.time()
+        solv.run(ac3=False,cbj=True)
+        ft = time.time()
+        tpsCbj.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+        # pour CBJ avec ac3
+        dt = time.time()
+        solv.run(ac3=True,cbj=True)
+        ft = time.time()
+        tpsCbjAc3.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+        
+    return [tpsFC,tpsFcAc3,tpsCbj,tpsCbjAc3]
 
-    return [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-
-def boxPlotTabs(xlabels,ylabel,data):
+def boxPlotTabs(xlabels,ylabel,data,title):
     nbLbls = len(xlabels)
-    for i in range(nbLbls):
+    for i in range(1,nbLbls+1):
         nbLign = nbLbls/2
         nbCol = nbLbls/nbLign+nbLbls%2
         plt.subplot(nbLign,nbCol,i)
-        plt.boxplot(data[i])
+        plt.boxplot(data[i-1])
     #    plt.title(xlabels[i])
-        plt.xlabel(xlabels[i])
+        plt.xlabel(xlabels[i-1])
     plt.ylabel(ylabel)
-    plt.save_fig(io.PLOT_PATH+'algos_diff.png')
-    plt.show()
-
+    plt.savefig(io.PLOT_PATH+'algos_diff_'+title+'.png')
+    #plt.show()
+    plt.close()
+    
 def plotsGridLength():
     # on recupere le dictionnaire
     dic.recupDictionnaire()
@@ -98,16 +102,32 @@ def plotsGridLength():
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-
-    times = [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-
+        # pour CBJ
+        dt = time.time()
+        solv.run(ac3=False,cbj=True)
+        ft = time.time()
+        tpsCbj.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+        # pour CBJ avec ac3
+        dt = time.time()
+        solv.run(ac3=True,cbj=True)
+        ft = time.time()
+        tpsCbjAc3.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+        
+    
+    times = [tpsFC,tpsFcAc3,tpsCbj,tpsCbjAc3]
+    
     for i in range(len(times)):
         plt.plot(times[i])
     #plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
     # TODO : label tps en fct de la taille de la grille
     #plt.xlabel(np.arange(LIGN_MIN,LIGN_MAX,PAS))
-    plt.show()
-
+    #plt.show()
+    plt.close()
+    
 def plotsDiffDicos(grid):
     tpsFC = []
     tpsFcAc3 = []
@@ -136,26 +156,41 @@ def plotsDiffDicos(grid):
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-
-    times = [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-
+        # pour CBJ
+        dt = time.time()
+        solv.run(ac3=False,cbj=True)
+        ft = time.time()
+        tpsCbj.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+        # pour CBJ avec ac3
+        dt = time.time()
+        solv.run(ac3=True,cbj=True)
+        ft = time.time()
+        tpsCbjAc3.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+    times = [tpsFC,tpsFcAc3,tpsCbj,tpsCbjAc3]
+    
     for i in range(len(times)):
         plt.plot(times[i])
-    #plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
+    plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
     # TODO : label tps en fct de la taille de la grille
     #plt.xlabel(np.arange(LIGN_MIN,LIGN_MAX,PAS))
-    plt.show()
-
+    #plt.show()
+    plt.close()
+    
 def plotsNoiresDiff():
     dic.recupDictionnaire()
     tpsFC = []
     tpsFcAc3 = []
     tpsCbj = []
     tpsCbjAc3 = []
+    taille = LIGN_DEF
     # dans tous les cas, on calcule tous les tps
-    for noires in range(CASE_NOIRE_MIN,CASE_NOIRE_MAX):
+    for noires in range(CASE_NOIRE_MIN,taille*taille):
         # recup dicos
-        grid = io.GrilleMots.genere_grid(LIGN_DEF,LIGN_DEF,noires)
+        grid = io.GrilleMots.genere_grid(taille,taille,noires)
         solv = io.Solver(grid, dic.DICTIONNAIRE, random=True)
         # pour FC
         dt = time.time()
@@ -171,15 +206,30 @@ def plotsNoiresDiff():
         tpsFcAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-
-    times = [tpsFC,tpsFcAc3]#,tpsCbj,tpsCbjAc3]
-
+        # pour CBJ
+        dt = time.time()
+        solv.run(ac3=False,cbj=True)
+        ft = time.time()
+        tpsCbj.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+        # pour CBJ avec ac3
+        dt = time.time()
+        solv.run(ac3=True,cbj=True)
+        ft = time.time()
+        tpsCbjAc3.append(ft-dt)
+        # on clear la grille
+        grid.clearAllVariables()
+    
+    times = [tpsFC,tpsFcAc3,tpsCbj,tpsCbjAc3]
+    
     for i in range(len(times)):
         plt.plot(times[i])
-    #plt.save_fig(io.PLOT_PATH+'tailles_grid_diff.png')
+    plt.save_fig(io.PLOT_PATH+'var_nb_cases_noires.png')
     # TODO : label tps en fct de la taille de la grille
     #plt.xlabel(np.arange(LIGN_MIN,LIGN_MAX,PAS))
-    plt.show()
+    #plt.show()
+    plt.close()
 
 ### TESTS
 # on recupere les 3 grilles exemples
@@ -188,10 +238,24 @@ B = io.read_file("grille2.txt")[0]
 C = io.read_file("grille3.txt")[0]
 
 # sauvegarde et affichage des graphes  sur une grille selon l'algo
-algos = ['FC sans AC3','FC avec AC3']#,'FC-CBJ sans AC3','FC-CBJ avec AC3']
+algos = ['FC sans AC3','FC avec AC3','FC-CBJ sans AC3','FC-CBJ avec AC3']
+
+# pour comparer les differents algos sur une meme instance
+# grille A
 times = tpsAlgosUneGrid(A)
-boxPlotTabs(algos,'Temps',times)    
+boxPlotTabs(algos,'Temps',times,"grilleA")
+# grille B
+times = tpsAlgosUneGrid(B)
+boxPlotTabs(algos,'Temps',times,"grilleB")
+# grille C
+times = tpsAlgosUneGrid(C)
+boxPlotTabs(algos,'Temps',times,"grilleC")
 
-#plotsGridLength()
+# pour comparer selon des tailles de grilles differerentes
+plotsGridLength()
 
+# pour comparer selon des tailles de dicos
 plotsDiffDicos(A)
+
+# pour comparer selon le nombre de cases noires pour une grille fixee
+plotsNoiresDiff()
