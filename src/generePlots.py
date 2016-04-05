@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 import gestDict as dic
 import threading
 
-ITERATIONS = 1
+ITERATIONS = 10
 LIGN_DEF = 5
 LIGN_MIN = 3
-LIGN_MAX = 9
-PAS = 2
+LIGN_MAX = 6
+PAS = 1
 CASE_NOIRE_MIN = 0
 CASE_NOIRE_MAX = 9
 
@@ -102,7 +102,7 @@ def plotsGridLength():
         tpsCbjAc3.append(applyAlgo(solv,grid,AC3=True,CBJ=True))
     times = [tpsFC,tpsFcAc3,tpsCbj,tpsCbjAc3]
 
-    my_xticks = x = np.arange(CASE_NOIRE_MIN,CASE_NOIRE_MAX)
+    my_xticks = x = np.arange(LIGN_MIN,LIGN_MAX,PAS)
     for i in range(0,len(times),2):
         plt.subplot(2,1,i/2)
         plt.plot(times[i],linewidth=1.5)
@@ -183,7 +183,6 @@ def plotsNoiresDiff():
 
 def applyAlgo(solv,grid,AC3=False,FC=False,CBJ=False):
     tps = []
-    print "NB ITERATIONS = ",ITERATIONS
     for i in range(ITERATIONS):
         dt = time.time()
         solv.run(ac3=AC3,fc=FC,cbj=CBJ)
@@ -210,7 +209,6 @@ B = io.read_file("grille2.txt")[0]
 C = io.read_file("grille3.txt")[0]
 
 # sauvegarde et affichage des graphes  sur une grille selon l'algo
-"""
 # pour comparer les differents algos sur une meme instance
 # grille A
 times = tpsAlgosUneGrid(A)
@@ -221,10 +219,9 @@ boxPlotTabs(algos,'Temps',times,"grilleB")
 # grille C
 times = tpsAlgosUneGrid(C)
 boxPlotTabs(algos,'Temps',times,"grilleC")
-"""
 
 # pour comparer selon des tailles de grilles differerentes
-plotsGridLength()
+#plotsGridLength()
 
 """
 # pour comparer selon des tailles de dicos
@@ -244,5 +241,9 @@ t2 = Task(plotsNoiresDiff)
 #t3 = Task(plotsDiffDicos,(A,'grilleA'))
 #t3.start()
 t1.start()
-t2.start()
+dti = time.time()
+while time.time()-dti<60:
+    continue
+t1.stop()
+#t2.start()
 """
