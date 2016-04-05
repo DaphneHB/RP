@@ -10,8 +10,9 @@ import time,os
 import numpy as np
 import matplotlib.pyplot as plt
 import gestDict as dic
+import threading
 
-ITERATIONS = 50
+ITERATIONS = 20
 LIGN_DEF = 5
 LIGN_MIN = 3
 LIGN_MAX = 9
@@ -20,6 +21,7 @@ CASE_NOIRE_MIN = 0
 CASE_NOIRE_MAX = 9
 
 algos = ['FC sans AC3','FC avec AC3','FC-CBJ sans AC3','FC-CBJ avec AC3']
+dicos = ["850-mots-us.txt","22600-mots-fr.txt","58000-mots-us.txt","133000-mots-us.txt","135000-mots-fr.txt"]
 
 def tpsAlgosUneGrid(grid,nbIter=ITERATIONS):
     # on recupere le dictionnaire
@@ -71,8 +73,7 @@ def boxPlotTabs(xlabels,ylabel,data,title):
         nbCol = nbLbls/nbLign+nbLbls%2
         plt.subplot(nbLign,nbCol,i)
         plt.boxplot(data[i-1])
-    #    plt.title(xlabels[i])
-        plt.xlabel(xlabels[i-1])
+        plt.xticks([1],xlabels[i-1])
     plt.ylabel(ylabel)
     plt.savefig(io.PLOT_PATH+'algos_diff_'+title+'.png')
     #plt.show()
@@ -116,8 +117,7 @@ def plotsDiffDicos(grid,title):
     tpsFcAc3 = []
     tpsCbj = []
     tpsCbjAc3 = []
-    #dicos = ["850-mots-us.txt","22600-mots-fr.txt","58000-mots-us.txt","133000-mots-us.txt","135000-mots-fr.txt"]
-    dicos = os.listdir('./data/Dicos/')
+    #dicos = os.listdir('./data/Dicos/')
     print dicos
     if grid is None:
         grid = io.GrilleMots.genere_grid(LIGN_DEF,LIGN_DEF,CASE_NOIRE_MIN)
@@ -192,6 +192,16 @@ def applyAlgo(solv,grid,AC3=False,FC=False,CBJ=False):
         grid.clearAllVariables()
     return np.mean(tps)
 
+class Task(threading.Thread): 
+    def __init__(self, fonct,args=()): 
+        threading.Thread.__init__(self)
+        self.fct = fonct
+        self.args = args
+    
+    def run(self):
+        self.fct(*self.args)
+        self.taskFinished.emit()
+        
 ### TESTS
 # on recupere les 3 grilles exemples
 A = io.read_file("grille1.txt")[0]
@@ -211,13 +221,25 @@ boxPlotTabs(algos,'Temps',times,"grilleB")
 times = tpsAlgosUneGrid(C)
 boxPlotTabs(algos,'Temps',times,"grilleC")
 """
-# pour comparer selon des tailles de grilles differerentes
-plotsGridLength()
 
+# pour comparer selon des tailles de grilles differerentes
+#plotsGridLength()
+
+"""
 # pour comparer selon des tailles de dicos
-#plotsDiffDicos(A,"grilleA")
-#plotsDiffDicos(B,"grilleB")
-#plotsDiffDicos(C,"grilleC")
+plotsDiffDicos(A,"grilleA")
+plotsDiffDicos(B,"grilleB")
+plotsDiffDicos(C,"grilleC")
+"""
 
 # pour comparer selon le nombre de cases noires pour une grille fixee
 #plotsNoiresDiff()
+
+# pour les lancer dans un thread : Task(nomFct,tupleArguments)  ;)
+# EX:
+t1 = Task(plotsGridLength)
+t2 = Task(plotsNoiresDiff)
+#t3 = Task(plotsDiffDicos,(A,'grilleA'))
+#t3.start()
+t1.start()
+t2.start()
