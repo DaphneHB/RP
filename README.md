@@ -1,2 +1,11 @@
 # RP
-De fait, le filtrage AC3 est de complexité exponentielle en respect de la taille des dictionnaires et aussi du nombre de mots. Cela s'explique par le fait que le nombre de contraintes à vérifier augmente exponentiellement en fonction de la configuration et de la taille de la grille.
+
+## Projet de résolution de problème (année 2016)
+
+### Génération de mots-croisés
+
+#### Introduction
+
+L'objet de ce projet est de développer et tester des méthodes de satisfaction de contraintes pour la génération de mots croisés. Etant donné une grille vide (incluant quelques cases noires) et un dictionnaire de mots admissibles (francais ou anglais), il s'agit de compléter la grille de manière à ce que tous les mots formés horizontalement ou verticalement dans la grille appartiennent au dictionnaire (on ne s'intéresse pas ici à la génération des définitions).
+
+keywords: FC-CBJ, CBJ, FC, backtrack, ac-3, crossword, CSP, heuristics, MRV, UPMC, Androide
