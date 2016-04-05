@@ -12,7 +12,11 @@ import matplotlib.pyplot as plt
 import gestDict as dic
 import threading
 
+<<<<<<< Updated upstream:src/generePlots.py
 ITERATIONS = 10
+=======
+ITERATIONS = 1
+>>>>>>> Stashed changes:src/projet_rp.py
 LIGN_DEF = 5
 LIGN_MIN = 3
 LIGN_MAX = 6
@@ -63,7 +67,7 @@ def tpsAlgosUneGrid(grid,nbIter=ITERATIONS):
         tpsCbjAc3.append(ft-dt)
         # on clear la grille
         grid.clearAllVariables()
-        
+
     return [tpsFC,tpsFcAc3,tpsCbj,tpsCbjAc3]
 
 def boxPlotTabs(xlabels,ylabel,data,title):
@@ -78,7 +82,7 @@ def boxPlotTabs(xlabels,ylabel,data,title):
     plt.savefig(io.PLOT_PATH+'algos_diff_'+title+'.png')
     #plt.show()
     plt.close()
-    
+
 def plotsGridLength():
     # on recupere le dictionnaire
     dic.recupDictionnaire()
@@ -112,7 +116,7 @@ def plotsGridLength():
     plt.savefig(io.PLOT_PATH+'tailles_grid_diff.png')
     #plt.show()
     plt.close()
-    
+
 def plotsDiffDicos(grid,title):
     tpsFC = []
     tpsFcAc3 = []
@@ -147,7 +151,7 @@ def plotsDiffDicos(grid,title):
     plt.savefig(io.PLOT_PATH+'tailles_dicos_diff_'+title+'.png')
     #plt.show()
     plt.close()
-    
+
 def plotsNoiresDiff():
     dic.recupDictionnaire()
     tpsFC = []
@@ -182,6 +186,7 @@ def plotsNoiresDiff():
     plt.close()
 
 def applyAlgo(solv,grid,AC3=False,FC=False,CBJ=False):
+    print AC3, FC, CBJ
     tps = []
     for i in range(ITERATIONS):
         dt = time.time()
@@ -192,16 +197,16 @@ def applyAlgo(solv,grid,AC3=False,FC=False,CBJ=False):
         grid.clearAllVariables()
     return np.mean(tps)
 
-class Task(threading.Thread): 
-    def __init__(self, fonct,args=()): 
+class Task(threading.Thread):
+    def __init__(self, fonct,args=()):
         threading.Thread.__init__(self)
         self.fct = fonct
         self.args = args
-    
+
     def run(self):
         self.fct(*self.args)
         self.taskFinished.emit()
-        
+
 ### TESTS
 # on recupere les 3 grilles exemples
 A = io.read_file("grille1.txt")[0]
@@ -241,9 +246,13 @@ t2 = Task(plotsNoiresDiff)
 #t3 = Task(plotsDiffDicos,(A,'grilleA'))
 #t3.start()
 t1.start()
+<<<<<<< Updated upstream:src/generePlots.py
 dti = time.time()
 while time.time()-dti<60:
     continue
 t1.stop()
 #t2.start()
 """
+=======
+t2.start()
+>>>>>>> Stashed changes:src/projet_rp.py

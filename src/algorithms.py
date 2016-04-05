@@ -11,6 +11,13 @@ import tools, time, random, itertools
 class Solver:
 
     def __init__(self, grid, dictionnaire, **kwargs):
+        """
+        @grid Object GrilleMots
+        @dictionnaire dict: Dictionnaire dont les clés sont les tailles
+            et les valeurs les sous ensemble du dictionnaire
+        @random bool: Shuffle le dictionnaire
+        @return neighbors dict (key: numVar, value: intersect position)
+        """
         self.grid = grid
         self.dictionnaire = tools.deepish_copy(dictionnaire)
         self.variables = self.grid.variables
@@ -297,7 +304,6 @@ class Solver:
 
         xk = heuristic(instance, variables)
         if not self.domain[xk]:
-            print "ok"
             return set([v for v in self.getCommuneVars(xk) if v in instance])
         conflict = set()
         nonBJ = True
