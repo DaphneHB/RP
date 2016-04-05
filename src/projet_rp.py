@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import gestDict as dic
 import threading
 
-ITERATIONS = 20
+ITERATIONS = 1
 LIGN_DEF = 5
 LIGN_MIN = 3
 LIGN_MAX = 9
@@ -88,6 +88,7 @@ def plotsGridLength():
     tpsCbjAc3 = []
     # dans tous les cas, on calcule tous les tps
     for i in range(LIGN_MIN,LIGN_MAX,PAS):
+        print "Test grille {}*{}".format(i,i)
         # recup grille
         grid = io.GrilleMots.genere_grid(i,i,CASE_NOIRE_MIN)
         solv = io.Solver(grid, dic.DICTIONNAIRE, random=True)
@@ -182,7 +183,7 @@ def plotsNoiresDiff():
 
 def applyAlgo(solv,grid,AC3=False,FC=False,CBJ=False):
     tps = []
-    # pour FC
+    print "NB ITERATIONS = ",ITERATIONS
     for i in range(ITERATIONS):
         dt = time.time()
         solv.run(ac3=AC3,fc=FC,cbj=CBJ)
@@ -223,7 +224,7 @@ boxPlotTabs(algos,'Temps',times,"grilleC")
 """
 
 # pour comparer selon des tailles de grilles differerentes
-#plotsGridLength()
+plotsGridLength()
 
 """
 # pour comparer selon des tailles de dicos
@@ -237,9 +238,11 @@ plotsDiffDicos(C,"grilleC")
 
 # pour les lancer dans un thread : Task(nomFct,tupleArguments)  ;)
 # EX:
+"""
 t1 = Task(plotsGridLength)
 t2 = Task(plotsNoiresDiff)
 #t3 = Task(plotsDiffDicos,(A,'grilleA'))
 #t3.start()
 t1.start()
 t2.start()
+"""
