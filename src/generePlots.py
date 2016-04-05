@@ -73,7 +73,8 @@ def boxPlotTabs(xlabels,ylabel,data,title):
         nbCol = nbLbls/nbLign+nbLbls%2
         plt.subplot(nbLign,nbCol,i)
         plt.boxplot(data[i-1])
-        plt.xticks([1],xlabels[i-1])
+        plt.xticks([1],"")
+        plt.xlabel(xlabels[i-1])
     plt.ylabel(ylabel)
     plt.savefig(io.PLOT_PATH+'algos_diff_'+title+'.png')
     #plt.show()
